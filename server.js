@@ -37,11 +37,50 @@ app.use(cors(corsOptions));
 // Middleware
 app.use(express.json());
 
-// Request logging middleware
+// Enhanced logging middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  console.log("Headers:", req.headers);
-  console.log("Body:", req.body);
+  const startTime = new Date();
+  const oldSend = res.send;
+  const oldJson = res.json;
+
+  // Store request details
+  const requestLog = {
+    endpoint: `${req.method} ${req.originalUrl}`,
+    input: {
+      body: req.body,
+      query: req.query,
+      params: req.params,
+    },
+  };
+
+  // Override send
+  res.send = function (body) {
+    const responseTime = new Date() - startTime;
+
+    console.log("\n//////////////////////");
+    console.log(`${requestLog.endpoint}`);
+    console.log(`Input: ${JSON.stringify(requestLog.input, null, 2)}`);
+    console.log(`Response: ${body}`);
+    console.log(`Response Time: ${responseTime}ms`);
+    console.log("////////////////////////\n");
+
+    return oldSend.apply(res, arguments);
+  };
+
+  // Override json
+  res.json = function (body) {
+    const responseTime = new Date() - startTime;
+
+    console.log("\n//////////////////////");
+    console.log(`${requestLog.endpoint}`);
+    console.log(`Input: ${JSON.stringify(requestLog.input, null, 2)}`);
+    console.log(`Response: ${JSON.stringify(body, null, 2)}`);
+    console.log(`Response Time: ${responseTime}ms`);
+    console.log("////////////////////////\n");
+
+    return oldJson.apply(res, arguments);
+  };
+
   next();
 });
 
