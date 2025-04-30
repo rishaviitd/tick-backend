@@ -112,6 +112,20 @@ app.use("/api/v1/assignments", assignmentRoutes);
 app.use("/api/v1/drafts", draftRoutes);
 app.use("/api/v1/ai-grading", aiGradingRoutes);
 
+// Debug route for auth verification - can help diagnose issues
+app.get("/api/v1/auth/verify-debug", (req, res) => {
+  console.log("\n//////////////////////");
+  console.log("DEBUG AUTH VERIFY ENDPOINT HIT");
+  console.log(`Headers: ${JSON.stringify(req.headers, null, 2)}`);
+  console.log("////////////////////////\n");
+
+  res.status(200).json({
+    success: true,
+    message: "Debug endpoint reached successfully",
+    headers: req.headers,
+  });
+});
+
 // Start server
 const port = config.PORT;
 app.listen(port, "0.0.0.0", () => {
