@@ -10,6 +10,12 @@ const config = require("../config/env");
  * Adds user information to the request object if valid
  */
 const authMiddleware = (req, res, next) => {
+  // For OPTIONS preflight requests, immediately continue
+  if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS preflight request");
+    return next();
+  }
+
   // Get token from header (check both x-auth-token and authorization headers)
   let token = req.header("x-auth-token");
 

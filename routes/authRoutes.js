@@ -6,8 +6,25 @@ const express = require("express");
 const { body } = require("express-validator");
 const authController = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
+const cors = require("cors");
 
 const router = express.Router();
+
+// Get CORS options from server
+const getCorsOptions = () => {
+  return {
+    origin: [
+      "https://usetick.com",
+      "https://app.usetick.com",
+      "https://www.usetick.com",
+      "https://www.app.usetick.com",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
+    credentials: true,
+    optionsSuccessStatus: 200,
+  };
+};
 
 // Validation middleware for signup
 const signupValidation = [
@@ -28,7 +45,13 @@ router.get("/google", authController.googleAuth);
 router.get("/google/callback", authController.googleOAuthCallback);
 router.post("/google/callback", authController.googleCallback);
 
-// Verify token is valid
-router.get("/verify", authMiddleware, authController.verifyToken);
+// Apply CORS options specifically for the verify endpoint
+router.options("/verify", cors(getCorsOptions()));
+router.get(
+  "/verify",
+  cors(getCorsOptions()),
+  authMiddleware,
+  authController.verifyToken
+);
 
 module.exports = router;

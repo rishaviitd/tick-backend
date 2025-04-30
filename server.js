@@ -18,8 +18,23 @@ const aiGradingRoutes = require("./routes/aiGradingRoutes");
 // Initialize express app
 const app = express();
 
+// CORS Configuration
+const corsOptions = {
+  origin: [
+    "https://usetick.com",
+    "https://www.app.usetick.com",
+    "https://www.usetick.com",
+    "https://www.app.usetick.com",
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+
 // Middleware
-app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json());
 
 // Request logging middleware
