@@ -21,10 +21,15 @@ const app = express();
 // CORS Configuration
 const corsOptions = {
   origin: [
+    // Production domains
     "https://usetick.com",
-    "https://www.app.usetick.com",
     "https://www.usetick.com",
+    "https://app.usetick.com",
     "https://www.app.usetick.com",
+    // Development domains (keep for testing)
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],

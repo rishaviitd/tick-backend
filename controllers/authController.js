@@ -393,6 +393,19 @@ exports.googleOAuthCallback = async (req, res) => {
  * @param {Object} res - Express response object
  */
 exports.verifyToken = (req, res) => {
+  // Log full verification details
+  console.log("\n[Auth Controller] Token verification endpoint hit");
+  console.log("[Auth Controller] Request headers:", {
+    origin: req.headers.origin,
+    host: req.headers.host,
+    referer: req.headers.referer,
+  });
+  console.log("[Auth Controller] User from token:", {
+    id: req.user.id,
+    name: req.user.name,
+    email: req.user.email,
+  });
+
   // If we reach this point, the token is valid (authMiddleware passed)
   return res.status(200).json({
     success: true,
