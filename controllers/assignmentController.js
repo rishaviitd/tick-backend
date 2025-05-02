@@ -210,16 +210,23 @@ exports.getAllDrafts = async (req, res) => {
 
     const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
-      return res.status(404).json({ message: "Teacher not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Teacher not found",
+      });
     }
 
     res.status(200).json({
+      success: true,
       message: "Drafts retrieved successfully",
       drafts: teacher.drafts,
     });
   } catch (err) {
     console.error("Error retrieving drafts:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
