@@ -224,32 +224,55 @@ exports.getAllDrafts = async (req, res) => {
 };
 
 /**
- * Get a specific draft by title
+ * Get a specific draft by ID (index in the drafts array)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-exports.getDraftByTitle = async (req, res) => {
+exports.getDraftById = async (req, res) => {
   try {
     const teacherId = req.user.id;
-    const { title } = req.params;
+    const { id } = req.params;
+
+    // Convert the ID to a number (array index)
+    const draftIndex = parseInt(id, 10);
+
+    if (isNaN(draftIndex) || draftIndex < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid draft ID format",
+      });
+    }
 
     const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
-      return res.status(404).json({ message: "Teacher not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Teacher not found",
+      });
     }
 
-    const draft = teacher.drafts.find((d) => d.title === title);
-    if (!draft) {
-      return res.status(404).json({ message: "Draft not found" });
+    // Check if the index is within bounds
+    if (!teacher.drafts || draftIndex >= teacher.drafts.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Draft not found",
+      });
     }
+
+    // Get the draft at the specified index
+    const draft = teacher.drafts[draftIndex];
 
     res.status(200).json({
+      success: true,
       message: "Draft retrieved successfully",
       draft,
     });
   } catch (err) {
     console.error("Error retrieving draft:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
@@ -261,28 +284,48 @@ exports.getDraftByTitle = async (req, res) => {
 exports.deleteDraft = async (req, res) => {
   try {
     const teacherId = req.user.id;
-    const { title } = req.params;
+    const { id } = req.params;
+
+    // Convert the ID to a number (array index)
+    const draftIndex = parseInt(id, 10);
+
+    if (isNaN(draftIndex) || draftIndex < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid draft ID format",
+      });
+    }
 
     const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
-      return res.status(404).json({ message: "Teacher not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Teacher not found",
+      });
     }
 
-    const draftIndex = teacher.drafts.findIndex((d) => d.title === title);
-    if (draftIndex === -1) {
-      return res.status(404).json({ message: "Draft not found" });
+    // Check if the index is within bounds
+    if (!teacher.drafts || draftIndex >= teacher.drafts.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Draft not found",
+      });
     }
 
-    // Remove the draft
+    // Remove the draft at the specified index
     teacher.drafts.splice(draftIndex, 1);
     await teacher.save();
 
     res.status(200).json({
+      success: true,
       message: "Draft deleted successfully",
     });
   } catch (err) {
     console.error("Error deleting draft:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 

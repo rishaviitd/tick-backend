@@ -14,6 +14,12 @@ router.use(authMiddleware);
 // Create a new assignment
 router.post("/", assignmentController.createAssignment);
 
+// Draft routes - IMPORTANT: Place these BEFORE the dynamic :assignmentId routes
+router.post("/drafts", assignmentController.saveDraft);
+router.get("/drafts", assignmentController.getAllDrafts);
+router.get("/drafts/:id", assignmentController.getDraftById);
+router.delete("/drafts/:id", assignmentController.deleteDraft);
+
 // Get assignment details
 router.get("/:assignmentId", assignmentController.getAssignmentDetails);
 
@@ -32,11 +38,5 @@ router.post(
   "/:assignmentId/students/:studentId/retry",
   assignmentController.retryGrading
 );
-
-// Draft routes
-router.post("/drafts", assignmentController.saveDraft);
-router.get("/drafts", assignmentController.getAllDrafts);
-router.get("/drafts/:title", assignmentController.getDraftByTitle);
-router.delete("/drafts/:title", assignmentController.deleteDraft);
 
 module.exports = router;
