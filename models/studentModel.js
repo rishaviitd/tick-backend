@@ -27,61 +27,24 @@ const studentAssignmentSchema = new mongoose.Schema({
   },
   aiFeedback: {
     overallAssessment: {
-      summary: {
-        type: String,
-        required: true,
-      },
-      score: {
-        type: String,
-        required: true,
-      },
-      correctness: {
-        type: String,
-        required: true,
-      },
+      summary: String,
+      score: String,
+      correctness: String,
     },
     stepAnalysis: [
       {
-        stepNumber: {
-          type: Number,
-          required: true,
-        },
-        status: {
-          type: String,
-          enum: ["correct", "incorrect", "partial"],
-          required: true,
-        },
-        justification: {
-          type: String,
-          required: true,
-        },
-        skillPoints: [
-          {
-            type: String,
-          },
-        ],
+        stepNumber: Number,
+        status: String,
+        justification: String,
+        skillPoints: [String],
       },
     ],
     transitionAnalysis: {
-      quality: {
-        type: String,
-        enum: ["Good", "Fair", "Poor", "Not evaluated"],
-        default: "Not evaluated",
-      },
-      comments: {
-        type: String,
-        default: "",
-      },
+      quality: String,
+      comments: String,
     },
-    improvements: [
-      {
-        type: String,
-      },
-    ],
-    teacherFeedbackAnalysis: {
-      type: String,
-      default: "",
-    },
+    improvements: [String],
+    teacherFeedbackAnalysis: String,
   },
   responses: [
     {
@@ -128,6 +91,7 @@ const studentSchema = new mongoose.Schema({
     ref: "Class",
     required: true,
   },
+
   assignments: {
     type: [studentAssignmentSchema],
     default: [],

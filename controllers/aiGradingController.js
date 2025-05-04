@@ -136,21 +136,7 @@ exports.updateGrades = async (req, res) => {
 
     // Save detailed AI feedback if provided
     if (aiFeedback) {
-      student.assignments[assignmentIndex].aiFeedback = {
-        overallAssessment: {
-          summary: aiFeedback.overallAssessment.summary,
-          score: aiFeedback.overallAssessment.score,
-          correctness:
-            aiFeedback.overallAssessment.correctness || "Not specified",
-        },
-        stepAnalysis: aiFeedback.stepAnalysis || [],
-        transitionAnalysis: aiFeedback.transitionAnalysis || {
-          quality: "Not evaluated",
-          comments: "",
-        },
-        improvements: aiFeedback.improvementAreas || [],
-        teacherFeedbackAnalysis: aiFeedback.teacherFeedbackAnalysis || "",
-      };
+      student.assignments[assignmentIndex].aiFeedback = aiFeedback;
     }
 
     // If feedback for individual questions is provided
@@ -163,13 +149,11 @@ exports.updateGrades = async (req, res) => {
         );
 
         if (responseIndex !== -1) {
-          student.assignments[assignmentIndex].responses[responseIndex] = {
-            question: feedback.questionId,
-            solution: feedback.solution || "No solution provided",
-            feedback: {
-              marks: feedback.marks || 0,
-              comment: feedback.comment || "",
-            },
+          student.assignments[assignmentIndex].responses[
+            responseIndex
+          ].feedback = {
+            marks: feedback.marks || 0,
+            comment: feedback.comment || "",
           };
         }
       });
@@ -185,7 +169,6 @@ exports.updateGrades = async (req, res) => {
         assignmentId,
         totalScore,
         status: "graded",
-        feedback: student.assignments[assignmentIndex],
       },
     });
   } catch (err) {
@@ -352,20 +335,14 @@ exports.getDetailedFeedback = async (req, res) => {
       assignmentTitle: assignment.title,
       status: studentAssignment.status,
       totalScore: studentAssignment.totalScore,
-      maxMarks: assignment.questions.reduce(
-        (total, q) => total + (q.maxMarks || 0),
-        0
-      ),
       submissionDate: studentAssignment.submissionDate,
       aiFeedback: studentAssignment.aiFeedback || null,
       questionResponses: await Promise.all(
-        studentAssignment.responses.map(async (response, index) => {
+        studentAssignment.responses.map(async (response) => {
           const question = await Question.findById(response.question);
           return {
             questionId: response.question,
-            questionNumber: index + 1,
             questionText: question ? question.text : "Question not found",
-            maxMarks: question ? question.maxMarks : 0,
             solution: response.solution,
             feedback: response.feedback,
           };
