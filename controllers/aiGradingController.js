@@ -139,7 +139,7 @@ exports.updateGrades = async (req, res) => {
       student.assignments[assignmentIndex].aiFeedback = aiFeedback;
     }
 
-    // If feedback for individual questions is provided, update feedback and solution
+    // If feedback for individual questions is provided
     if (feedbackData && Array.isArray(feedbackData)) {
       feedbackData.forEach((feedback) => {
         const responseIndex = student.assignments[
@@ -149,19 +149,12 @@ exports.updateGrades = async (req, res) => {
         );
 
         if (responseIndex !== -1) {
-          // Update marks and comment
           student.assignments[assignmentIndex].responses[
             responseIndex
           ].feedback = {
             marks: feedback.marks || 0,
             comment: feedback.comment || "",
           };
-          // Update extracted solution if provided
-          if (feedback.solution !== undefined) {
-            student.assignments[assignmentIndex].responses[
-              responseIndex
-            ].solution = feedback.solution;
-          }
         }
       });
     }

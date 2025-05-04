@@ -28,27 +28,23 @@ const studentAssignmentSchema = new mongoose.Schema({
   aiFeedback: {
     overallAssessment: {
       summary: String,
-      score: Number,
-      percentage: Number,
-      maxScore: Number,
+      score: String,
+      correctness: String,
     },
-    questionFeedback: [
+    stepAnalysis: [
       {
-        questionNumber: Number,
-        score: Number,
-        maxScore: Number,
-        extractedSolution: String,
-        feedback: String,
+        stepNumber: Number,
+        status: String,
+        justification: String,
+        skillPoints: [String],
       },
     ],
-    improvementAreas: [String],
-    strengths: [String],
-    default: {
-      overallAssessment: { summary: "", score: 0, percentage: 0, maxScore: 0 },
-      questionFeedback: [],
-      improvementAreas: [],
-      strengths: [],
+    transitionAnalysis: {
+      quality: String,
+      comments: String,
     },
+    improvements: [String],
+    teacherFeedbackAnalysis: String,
   },
   responses: [
     {
