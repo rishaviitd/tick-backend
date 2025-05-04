@@ -26,8 +26,29 @@ const studentAssignmentSchema = new mongoose.Schema({
     default: 0,
   },
   aiFeedback: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {},
+    overallAssessment: {
+      summary: String,
+      score: Number,
+      percentage: Number,
+      maxScore: Number,
+    },
+    questionFeedback: [
+      {
+        questionNumber: Number,
+        score: Number,
+        maxScore: Number,
+        extractedSolution: String,
+        feedback: String,
+      },
+    ],
+    improvementAreas: [String],
+    strengths: [String],
+    default: {
+      overallAssessment: { summary: "", score: 0, percentage: 0, maxScore: 0 },
+      questionFeedback: [],
+      improvementAreas: [],
+      strengths: [],
+    },
   },
   responses: [
     {
