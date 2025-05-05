@@ -96,7 +96,7 @@ exports.startGrading = async (req, res) => {
 exports.updateGrades = async (req, res) => {
   try {
     const { assignmentId, studentId } = req.params;
-    const { feedbackData } = req.body;
+    const { feedbackData, status } = req.body;
 
     if (!assignmentId || !studentId) {
       return res.status(400).json({
@@ -126,12 +126,43 @@ exports.updateGrades = async (req, res) => {
       });
     }
 
-    // Update the assignment status
-    student.assignments[assignmentIndex].status = "completed";
+    // Update the assignment status if provided
+    if (status) {
+      // Validate the status value
+      const validStatuses = [
+        "pending",
+        "submitted",
+        "processing",
+        "completed",
+        "graded",
+        "failed",
+      ];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status value. Must be one of: ${validStatuses.join(
+            ", "
+          )}`,
+        });
+      }
+      student.assignments[assignmentIndex].status = status;
+    } else {
+      // Default to completed
+      student.assignments[assignmentIndex].status = "completed";
+    }
 
     // If feedback for individual questions is provided
     if (feedbackData && Array.isArray(feedbackData)) {
+      console.log(`Processing ${feedbackData.length} feedback items`);
+
       feedbackData.forEach((feedback) => {
+        if (!feedback.questionId) {
+          console.warn("Skipping feedback item without questionId");
+          return;
+        }
+
+        console.log(`Processing feedback for question ${feedback.questionId}`);
+
         const responseIndex = student.assignments[
           assignmentIndex
         ].responses.findIndex(
@@ -139,15 +170,21 @@ exports.updateGrades = async (req, res) => {
         );
 
         if (responseIndex !== -1) {
-          // Only update the solution
+          // Update the solution
           student.assignments[assignmentIndex].responses[
             responseIndex
           ].solution = feedback.solution || "";
+          console.log(`Updated solution for question ${feedback.questionId}`);
+        } else {
+          console.warn(
+            `Question ${feedback.questionId} not found in student responses`
+          );
         }
       });
     }
 
     await student.save();
+    console.log("Student document saved successfully");
 
     res.status(200).json({
       success: true,
@@ -155,7 +192,7 @@ exports.updateGrades = async (req, res) => {
       data: {
         studentId,
         assignmentId,
-        status: "completed",
+        status: student.assignments[assignmentIndex].status,
       },
     });
   } catch (err) {
