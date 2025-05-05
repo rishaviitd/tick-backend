@@ -14,6 +14,9 @@ router.use(authMiddleware);
 // Create a new assignment
 router.post("/", assignmentController.createAssignment);
 
+// Update an existing assignment
+router.put("/:assignmentId", assignmentController.updateAssignment);
+
 // Draft routes - IMPORTANT: Place these BEFORE the dynamic :assignmentId routes
 router.post("/drafts", assignmentController.saveDraft);
 router.get("/drafts", assignmentController.getAllDrafts);

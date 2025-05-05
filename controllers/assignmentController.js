@@ -139,6 +139,118 @@ exports.createAssignment = async (req, res) => {
 };
 
 /**
+ * Update an existing assignment
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.updateAssignment = async (req, res) => {
+  try {
+    const { assignmentId } = req.params;
+    const { title, questions, active } = req.body;
+    const teacherId = req.user.id;
+
+    console.log("Assignment update request:", {
+      assignmentId,
+      title,
+      questionsCount: questions?.length || 0,
+      active,
+    });
+
+    // Input validation
+    if (
+      !assignmentId ||
+      !title ||
+      !questions ||
+      !Array.isArray(questions) ||
+      questions.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Assignment ID, title, and at least one question are required",
+      });
+    }
+
+    // Find the assignment to update
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found",
+      });
+    }
+
+    // Find the class that contains this assignment
+    const classData = await Class.findOne({ assignments: assignmentId });
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: "Class not found for this assignment",
+      });
+    }
+
+    // Verify this teacher owns this class
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher || !teacher.classes.includes(classData._id.toString())) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to edit this assignment",
+      });
+    }
+
+    // Get existing question IDs to delete
+    const existingQuestionIds = assignment.questions;
+
+    // Create new question documents
+    const questionDocs = questions.map((q) => ({
+      text: q.text,
+      maxMarks: q.maxMarks || 0,
+      rubric: q.rubric || "",
+    }));
+
+    const newQuestions = await Question.insertMany(questionDocs);
+    const newQuestionIds = newQuestions.map((q) => q._id);
+
+    // Update the assignment with new information
+    assignment.title = title;
+    assignment.questions = newQuestionIds;
+    if (active !== undefined) {
+      assignment.active = active;
+    }
+
+    await assignment.save();
+
+    // Delete the old questions to prevent orphaned data
+    if (existingQuestionIds && existingQuestionIds.length > 0) {
+      await Question.deleteMany({ _id: { $in: existingQuestionIds } });
+    }
+
+    console.log("Assignment updated successfully:", {
+      assignmentId: assignment._id,
+      title: assignment.title,
+      questionsCount: newQuestionIds.length,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Assignment updated successfully",
+      data: {
+        id: assignment._id,
+        title: assignment.title,
+        active: assignment.active,
+        questionCount: newQuestionIds.length,
+      },
+    });
+  } catch (err) {
+    console.error("Error updating assignment:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
+
+/**
  * Save an assignment draft for a teacher
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
