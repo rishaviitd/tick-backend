@@ -1,13 +1,13 @@
 /**
  * AI Grading Controller
- * Handles operations related to automatic grading using AI
+ * Handles operations related to extracting student solutions
  */
 const Student = require("../models/studentModel");
 const Assignment = require("../models/assignmentModel");
 const Question = require("../models/questionModel");
 
 /**
- * Start AI grading process for a student submission
+ * Start solution extraction process for a student submission
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -53,7 +53,6 @@ exports.startGrading = async (req, res) => {
       const responses = assignment.questions.map((q) => ({
         question: q._id,
         solution: "",
-        feedback: { marks: 0, comment: "" },
       }));
 
       student.assignments.push({
@@ -70,12 +69,9 @@ exports.startGrading = async (req, res) => {
 
     await student.save();
 
-    // In a real implementation, we would initiate a background job for AI grading here
-    // For now, we'll just return success to indicate the grading process has started
-
     res.status(200).json({
       success: true,
-      message: "Grading process started",
+      message: "Solution extraction process started",
       data: {
         studentId,
         assignmentId,
@@ -83,7 +79,7 @@ exports.startGrading = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error starting grading process:", err);
+    console.error("Error starting solution extraction process:", err);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -93,14 +89,14 @@ exports.startGrading = async (req, res) => {
 };
 
 /**
- * Update the grades from AI processing
+ * Update the solutions from AI processing
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 exports.updateGrades = async (req, res) => {
   try {
     const { assignmentId, studentId } = req.params;
-    const { totalScore, feedbackData, aiFeedback } = req.body;
+    const { feedbackData } = req.body;
 
     if (!assignmentId || !studentId) {
       return res.status(400).json({
@@ -130,14 +126,8 @@ exports.updateGrades = async (req, res) => {
       });
     }
 
-    // Update the assignment with grades and feedback
-    student.assignments[assignmentIndex].status = "graded";
-    student.assignments[assignmentIndex].totalScore = totalScore;
-
-    // Save detailed AI feedback if provided
-    if (aiFeedback) {
-      student.assignments[assignmentIndex].aiFeedback = aiFeedback;
-    }
+    // Update the assignment status
+    student.assignments[assignmentIndex].status = "completed";
 
     // If feedback for individual questions is provided
     if (feedbackData && Array.isArray(feedbackData)) {
@@ -149,12 +139,10 @@ exports.updateGrades = async (req, res) => {
         );
 
         if (responseIndex !== -1) {
+          // Only update the solution
           student.assignments[assignmentIndex].responses[
             responseIndex
-          ].feedback = {
-            marks: feedback.marks || 0,
-            comment: feedback.comment || "",
-          };
+          ].solution = feedback.solution || "";
         }
       });
     }
@@ -163,16 +151,15 @@ exports.updateGrades = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Grades updated successfully",
+      message: "Solutions updated successfully",
       data: {
         studentId,
         assignmentId,
-        totalScore,
-        status: "graded",
+        status: "completed",
       },
     });
   } catch (err) {
-    console.error("Error updating grades:", err);
+    console.error("Error updating solutions:", err);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -198,7 +185,7 @@ exports.uploadSubmission = async (req, res) => {
       });
     }
 
-    // TODO: Process the uploaded file, store it, and start AI grading
+    // TODO: Process the uploaded file, store it, and start solution extraction
 
     // For now, we'll just return success
     res.status(200).json({
@@ -265,7 +252,6 @@ exports.getSubmissionStatus = async (req, res) => {
         assignmentId,
         status: studentAssignment.status,
         submissionDate: studentAssignment.submissionDate,
-        totalScore: studentAssignment.totalScore,
       },
     });
   } catch (err) {
@@ -279,7 +265,7 @@ exports.getSubmissionStatus = async (req, res) => {
 };
 
 /**
- * Get detailed feedback for a student's assignment
+ * Get detailed solutions for a student's assignment
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -294,7 +280,7 @@ exports.getDetailedFeedback = async (req, res) => {
       });
     }
 
-    // Find the student with populated assignment and questions
+    // Find the student
     const student = await Student.findById(studentId);
     if (!student) {
       return res.status(404).json({
@@ -327,16 +313,14 @@ exports.getDetailedFeedback = async (req, res) => {
       });
     }
 
-    // Format the detailed feedback response
-    const detailedFeedback = {
+    // Format the response with only questions and solutions
+    const detailedSolutions = {
       assignmentId,
       studentId,
       studentName: student.full_name,
       assignmentTitle: assignment.title,
       status: studentAssignment.status,
-      totalScore: studentAssignment.totalScore,
       submissionDate: studentAssignment.submissionDate,
-      aiFeedback: studentAssignment.aiFeedback || null,
       questionResponses: await Promise.all(
         studentAssignment.responses.map(async (response) => {
           const question = await Question.findById(response.question);
@@ -344,7 +328,6 @@ exports.getDetailedFeedback = async (req, res) => {
             questionId: response.question,
             questionText: question ? question.text : "Question not found",
             solution: response.solution,
-            feedback: response.feedback,
           };
         })
       ),
@@ -352,10 +335,10 @@ exports.getDetailedFeedback = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: detailedFeedback,
+      data: detailedSolutions,
     });
   } catch (err) {
-    console.error("Error getting detailed feedback:", err);
+    console.error("Error getting detailed solutions:", err);
     res.status(500).json({
       success: false,
       message: "Internal server error",

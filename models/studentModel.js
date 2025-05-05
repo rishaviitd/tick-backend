@@ -8,43 +8,11 @@ const studentAssignmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "submitted", "processing", "graded", "failed"],
+    enum: ["pending", "submitted", "processing", "completed"],
     default: "pending",
   },
   submissionDate: {
     type: Date,
-  },
-  isShared: {
-    type: Boolean,
-    default: false,
-  },
-  sharedUrl: {
-    type: String,
-  },
-  totalScore: {
-    type: Number,
-    default: 0,
-  },
-  aiFeedback: {
-    overallAssessment: {
-      summary: String,
-      score: String,
-      correctness: String,
-    },
-    stepAnalysis: [
-      {
-        stepNumber: Number,
-        status: String,
-        justification: String,
-        skillPoints: [String],
-      },
-    ],
-    transitionAnalysis: {
-      quality: String,
-      comments: String,
-    },
-    improvements: [String],
-    teacherFeedbackAnalysis: String,
   },
   responses: [
     {
@@ -55,17 +23,7 @@ const studentAssignmentSchema = new mongoose.Schema({
       },
       solution: {
         type: String,
-        required: true,
-      },
-      feedback: {
-        marks: {
-          type: Number,
-          default: 0,
-        },
-        comment: {
-          type: String,
-          default: "",
-        },
+        default: "",
       },
     },
   ],
