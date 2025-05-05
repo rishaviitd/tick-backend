@@ -43,19 +43,20 @@ const studentSchema = new mongoose.Schema({
   },
   mobileNo: {
     type: String,
-    // Removed unique: true constraint to allow students to be in multiple classes
+    // No unique constraint here
   },
   rollNo: {
     type: String,
     default: "",
-    // Explicitly NOT unique
     index: false, // Ensure no separate index is created for this field
   },
-  class: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Class",
-    required: true,
-  },
+  // Change class field to classes array to allow students to be in multiple classes
+  classes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Class",
+    },
+  ],
 
   assignments: {
     type: [studentAssignmentSchema],
@@ -63,9 +64,9 @@ const studentSchema = new mongoose.Schema({
   },
 });
 
-// Create a compound index for rollNo and class to ensure uniqueness only within a class
+// Create a compound index for rollNo and classes to ensure uniqueness only within a class
 studentSchema.index(
-  { rollNo: 1, class: 1 },
+  { rollNo: 1, classes: 1 },
   {
     unique: true,
     // Skip the constraint check if rollNo is empty
@@ -76,31 +77,42 @@ studentSchema.index(
 // Create the model
 const Student = mongoose.model("Student", studentSchema);
 
-// This code will attempt to drop any existing index on just the rollNo field
-// It needs to be executed after your server is up and running
-const dropSingleRollNoIndex = async () => {
+// This code will attempt to drop any existing indexes we don't want
+const dropUnwantedIndexes = async () => {
   try {
-    // Get collection info to find the index name
+    // Get collection info to find the index names
     const collection = Student.collection;
     const indexInfo = await collection.indexInformation();
 
-    // Look for indexes that only have rollNo
+    // Look for mobileNo unique index that we want to drop
     for (const [indexName, indexFields] of Object.entries(indexInfo)) {
+      // Drop the mobileNo unique index
       if (
         indexFields.length === 1 &&
-        indexFields[0][0] === "rollNo" &&
+        indexFields[0][0] === "mobileNo" &&
         indexName !== "_id_"
       ) {
-        console.log(`Dropping single rollNo index: ${indexName}`);
+        console.log(`Dropping mobileNo index: ${indexName}`);
+        await collection.dropIndex(indexName);
+      }
+
+      // Also drop the old rollNo and class index if it exists
+      if (
+        indexFields.length === 2 &&
+        indexFields[0][0] === "rollNo" &&
+        indexFields[1][0] === "class" &&
+        indexName !== "_id_"
+      ) {
+        console.log(`Dropping old rollNo_class index: ${indexName}`);
         await collection.dropIndex(indexName);
       }
     }
-    console.log("Finished checking for rollNo indexes");
+    console.log("Finished checking and dropping unwanted indexes");
   } catch (error) {
-    console.error("Error dropping rollNo index:", error);
+    console.error("Error dropping indexes:", error);
   }
 };
 
-// Export both the model and the function to drop the index
+// Export both the model and the function to drop unwanted indexes
 module.exports = Student;
-module.exports.dropSingleRollNoIndex = dropSingleRollNoIndex;
+module.exports.dropUnwantedIndexes = dropUnwantedIndexes;

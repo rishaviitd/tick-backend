@@ -6,6 +6,7 @@ const express = require("express");
 const cors = require("cors");
 const connectDatabase = require("./config/database");
 const config = require("./config/env");
+const Student = require("./models/studentModel");
 
 // Import routes
 const authRoutes = require("./routes/authRoutes");
@@ -95,6 +96,18 @@ app.use((req, res, next) => {
 connectDatabase()
   .then(() => {
     console.log("Database connection established.");
+
+    // After connection is established, drop unwanted indexes from Student collection
+    try {
+      console.log("Attempting to drop unwanted indexes...");
+      Student.dropUnwantedIndexes()
+        .then(() =>
+          console.log("Successfully checked and dropped unwanted indexes")
+        )
+        .catch((err) => console.error("Error dropping indexes:", err));
+    } catch (error) {
+      console.error("Error during index cleanup:", error);
+    }
   })
   .catch((err) => {
     console.error("Database connection failed:", err);

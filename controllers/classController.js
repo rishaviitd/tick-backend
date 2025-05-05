@@ -77,26 +77,55 @@ exports.createClass = async (req, res) => {
       assignments: [],
     });
 
-    // Step 2: Find existing students and create new ones if needed
+    // Step 2: Find existing students by mobile number or create new ones
     const studentIds = [];
 
-    // Process each student - create a new student record for this class
-    for (const student of students) {
-      const { full_name, mobileNo, rollNo } = student;
+    // Find existing students by mobile number
+    const existingStudents = await Student.find({
+      mobileNo: { $in: mobileNumbers },
+    });
+
+    // Create a map of mobile numbers to existing students
+    const mobileToStudentMap = {};
+    existingStudents.forEach((student) => {
+      mobileToStudentMap[student.mobileNo] = student;
+    });
+
+    // Process each student
+    for (const studentData of students) {
+      const { full_name, mobileNo, rollNo } = studentData;
 
       if (!full_name || !mobileNo) {
         throw new Error("Each student must have full_name and mobileNo");
       }
 
-      // Create a new student entry for this class
-      const newStudent = await Student.create({
-        full_name,
-        mobileNo,
-        rollNo: rollNo ? rollNo.trim() : "", // Trim roll number if exists
-        class: newClass._id,
-      });
+      let studentId;
 
-      studentIds.push(newStudent._id);
+      // Check if student with this mobile number already exists
+      if (mobileToStudentMap[mobileNo]) {
+        // Student exists, add this class to their classes array if not already there
+        const existingStudent = mobileToStudentMap[mobileNo];
+
+        // Check if student already has this class
+        if (!existingStudent.classes.includes(newClass._id)) {
+          existingStudent.classes.push(newClass._id);
+          await existingStudent.save();
+        }
+
+        studentId = existingStudent._id;
+      } else {
+        // Create new student with this class in their classes array
+        const newStudent = await Student.create({
+          full_name,
+          mobileNo,
+          rollNo: rollNo ? rollNo.trim() : "", // Trim roll number if exists
+          classes: [newClass._id],
+        });
+
+        studentId = newStudent._id;
+      }
+
+      studentIds.push(studentId);
     }
 
     // Step 3: Push students into class
@@ -121,7 +150,7 @@ exports.createClass = async (req, res) => {
 
     // Special handling for MongoDB duplicate key errors
     if (error.code === 11000) {
-      if (error.keyPattern?.rollNo && error.keyPattern?.class) {
+      if (error.keyPattern?.rollNo && error.keyPattern?.classes) {
         // This is a duplicate roll number within the same class
         return res.status(409).json({
           message: "Duplicate roll number within this class",
