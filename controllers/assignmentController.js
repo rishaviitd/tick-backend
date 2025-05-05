@@ -468,7 +468,7 @@ exports.getAssignmentDetails = async (req, res) => {
 exports.updateStudentAssignment = async (req, res) => {
   try {
     const { assignmentId, studentId } = req.params;
-    const { status, isShared, totalScore, feedback } = req.body;
+    const { status } = req.body;
 
     if (!assignmentId || !studentId) {
       return res.status(400).json({
@@ -514,65 +514,19 @@ exports.updateStudentAssignment = async (req, res) => {
       // Create empty responses for each question
       const responses = assignment.questions.map((q) => ({
         question: q._id,
-        solution: "pending", // Provide a non-empty default value to pass validation
-        feedback: { marks: 0, comment: "" },
+        solution: "",
       }));
 
       // Add the new assignment to student
       student.assignments.push({
         assignment: assignmentId,
         status,
-        isShared: isShared || false,
-        totalScore: totalScore || 0,
         responses,
       });
     } else {
       // Update existing assignment
       if (status) {
         student.assignments[assignmentIndex].status = status;
-      }
-
-      if (isShared !== undefined) {
-        student.assignments[assignmentIndex].isShared = isShared;
-
-        // Generate shared URL if being shared
-        if (isShared) {
-          const sharedUrl = `${
-            process.env.FRONTEND_URL || "https://example.com"
-          }/results/${studentId}/${assignmentId}`;
-          student.assignments[assignmentIndex].sharedUrl = sharedUrl;
-        }
-      }
-
-      if (totalScore !== undefined) {
-        student.assignments[assignmentIndex].totalScore = totalScore;
-      }
-
-      // If feedback provided, update individual question feedback
-      if (feedback && Array.isArray(feedback)) {
-        feedback.forEach((item) => {
-          if (!item.questionId) return;
-
-          const responseIndex = student.assignments[
-            assignmentIndex
-          ].responses.findIndex(
-            (r) => r.question.toString() === item.questionId
-          );
-
-          if (responseIndex !== -1) {
-            if (item.marks !== undefined) {
-              student.assignments[assignmentIndex].responses[
-                responseIndex
-              ].feedback.marks = item.marks;
-            }
-
-            if (item.comment !== undefined) {
-              student.assignments[assignmentIndex].responses[
-                responseIndex
-              ].feedback.comment = item.comment;
-            }
-          }
-        });
       }
     }
 
