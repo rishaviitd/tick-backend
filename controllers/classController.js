@@ -69,25 +69,6 @@ exports.createClass = async (req, res) => {
       }
     }
 
-    // Then check if any mobile numbers already exist in the database
-    const existingStudents = await Student.find(
-      {
-        mobileNo: { $in: mobileNumbers },
-      },
-      "mobileNo full_name"
-    );
-
-    if (existingStudents.length > 0) {
-      return res.status(409).json({
-        message: "Some students already exist with these mobile numbers",
-        duplicates: existingStudents.map((s) => ({
-          mobileNo: s.mobileNo,
-          full_name: s.full_name,
-        })),
-        type: "mobileNo",
-      });
-    }
-
     // Step 1: Create class (empty student list for now)
     const newClass = await Class.create({
       title,
@@ -96,28 +77,30 @@ exports.createClass = async (req, res) => {
       assignments: [],
     });
 
-    // Step 2: Create all students & link them to the class
-    const createdStudents = await Promise.all(
-      students.map(async (student) => {
-        const { full_name, mobileNo, rollNo } = student;
+    // Step 2: Find existing students and create new ones if needed
+    const studentIds = [];
 
-        if (!full_name || !mobileNo) {
-          throw new Error("Each student must have full_name and mobileNo");
-        }
+    // Process each student - create a new student record for this class
+    for (const student of students) {
+      const { full_name, mobileNo, rollNo } = student;
 
-        const newStudent = await Student.create({
-          full_name,
-          mobileNo,
-          rollNo: rollNo ? rollNo.trim() : "", // Trim roll number if exists
-          class: newClass._id,
-        });
+      if (!full_name || !mobileNo) {
+        throw new Error("Each student must have full_name and mobileNo");
+      }
 
-        return newStudent._id;
-      })
-    );
+      // Create a new student entry for this class
+      const newStudent = await Student.create({
+        full_name,
+        mobileNo,
+        rollNo: rollNo ? rollNo.trim() : "", // Trim roll number if exists
+        class: newClass._id,
+      });
+
+      studentIds.push(newStudent._id);
+    }
 
     // Step 3: Push students into class
-    newClass.students.push(...createdStudents);
+    newClass.students.push(...studentIds);
     await newClass.save();
 
     // Step 4: Push class into teacher
@@ -130,7 +113,7 @@ exports.createClass = async (req, res) => {
         id: newClass._id,
         title: newClass.title,
         teacher: teacher.full_name,
-        students: createdStudents,
+        students: studentIds,
       },
     });
   } catch (error) {
@@ -144,13 +127,6 @@ exports.createClass = async (req, res) => {
           message: "Duplicate roll number within this class",
           duplicates: [error.keyValue.rollNo],
           type: "rollNo",
-        });
-      } else if (error.keyPattern?.mobileNo) {
-        // This is a duplicate mobile number
-        return res.status(409).json({
-          message: "Student with this mobile number already exists",
-          duplicates: [error.keyValue.mobileNo],
-          type: "mobileNo",
         });
       }
     }

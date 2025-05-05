@@ -43,7 +43,7 @@ const studentSchema = new mongoose.Schema({
   },
   mobileNo: {
     type: String,
-    unique: true,
+    // Removed unique: true constraint to allow students to be in multiple classes
   },
   rollNo: {
     type: String,
