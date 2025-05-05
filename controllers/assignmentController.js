@@ -24,6 +24,15 @@ exports.createAssignment = async (req, res) => {
     } = req.body;
     const teacherId = req.user.id;
 
+    console.log("Assignment creation request:", {
+      title,
+      maxMarks,
+      questionsCount: questions?.length || 0,
+      active,
+      requestClassId,
+      teacherId,
+    });
+
     // Input validation
     if (
       !title ||
@@ -56,10 +65,12 @@ exports.createAssignment = async (req, res) => {
 
     // Use the provided classId if available, otherwise fall back to the first class
     let classId = requestClassId || teacher.classes[0];
+    console.log("Using classId:", classId);
 
     // Validate class and teacher relationship
     const classData = await Class.findById(classId);
     if (!classData) {
+      console.error("Class not found with ID:", classId);
       return res.status(404).json({
         success: false,
         message: "Class not found",
@@ -68,6 +79,10 @@ exports.createAssignment = async (req, res) => {
 
     // Validate that the class belongs to this teacher
     if (!teacher.classes.includes(classId)) {
+      console.error("Class not associated with teacher:", {
+        classId,
+        teacherClasses: teacher.classes,
+      });
       return res.status(403).json({
         success: false,
         message: "You don't have permission to add assignments to this class",
@@ -94,6 +109,13 @@ exports.createAssignment = async (req, res) => {
     // 3. Add the assignment to the class
     classData.assignments.push(newAssignment._id);
     await classData.save();
+
+    console.log("Assignment created successfully:", {
+      assignmentId: newAssignment._id,
+      title: newAssignment.title,
+      questionsCount: questionIds.length,
+      classId: classData._id,
+    });
 
     res.status(201).json({
       success: true,
