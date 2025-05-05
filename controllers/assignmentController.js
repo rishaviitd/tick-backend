@@ -499,6 +499,24 @@ exports.updateStudentAssignment = async (req, res) => {
         });
       }
 
+      // Validate status is one of the allowed values
+      const validStatuses = [
+        "pending",
+        "submitted",
+        "processing",
+        "completed",
+        "graded",
+        "failed",
+      ];
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status value. Must be one of: ${validStatuses.join(
+            ", "
+          )}`,
+        });
+      }
+
       // Find the assignment to get its questions
       const assignment = await Assignment.findById(assignmentId).populate(
         "questions"
@@ -514,34 +532,40 @@ exports.updateStudentAssignment = async (req, res) => {
       // Create empty responses for each question
       const responses = assignment.questions.map((q) => ({
         question: q._id,
-        solution: "pending", // Provide a non-empty default value to pass validation
-        feedback: { marks: 0, comment: "" },
+        solution: "",
       }));
 
       // Add the new assignment to student
       student.assignments.push({
         assignment: assignmentId,
         status,
-        isShared: isShared || false,
-        totalScore: totalScore || 0,
         responses,
       });
     } else {
       // Update existing assignment
       if (status) {
+        // Validate status is one of the allowed values
+        const validStatuses = [
+          "pending",
+          "submitted",
+          "processing",
+          "completed",
+          "graded",
+          "failed",
+        ];
+        if (!validStatuses.includes(status)) {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid status value. Must be one of: ${validStatuses.join(
+              ", "
+            )}`,
+          });
+        }
         student.assignments[assignmentIndex].status = status;
       }
 
       if (isShared !== undefined) {
         student.assignments[assignmentIndex].isShared = isShared;
-
-        // Generate shared URL if being shared
-        if (isShared) {
-          const sharedUrl = `${
-            process.env.FRONTEND_URL || "https://example.com"
-          }/results/${studentId}/${assignmentId}`;
-          student.assignments[assignmentIndex].sharedUrl = sharedUrl;
-        }
       }
 
       if (totalScore !== undefined) {
@@ -560,16 +584,11 @@ exports.updateStudentAssignment = async (req, res) => {
           );
 
           if (responseIndex !== -1) {
-            if (item.marks !== undefined) {
+            // Update the solution if provided
+            if (item.solution !== undefined) {
               student.assignments[assignmentIndex].responses[
                 responseIndex
-              ].feedback.marks = item.marks;
-            }
-
-            if (item.comment !== undefined) {
-              student.assignments[assignmentIndex].responses[
-                responseIndex
-              ].feedback.comment = item.comment;
+              ].solution = item.solution || "";
             }
           }
         });

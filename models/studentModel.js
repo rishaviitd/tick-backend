@@ -8,7 +8,14 @@ const studentAssignmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "submitted", "processing", "completed"],
+    enum: [
+      "pending",
+      "submitted",
+      "processing",
+      "completed",
+      "graded",
+      "failed",
+    ],
     default: "pending",
   },
   submissionDate: {
