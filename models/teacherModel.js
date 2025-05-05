@@ -36,6 +36,10 @@ const draftSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    classId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Class",
+    },
   },
   { _id: false }
 );

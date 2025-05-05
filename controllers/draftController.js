@@ -88,7 +88,7 @@ exports.getDraft = async (req, res) => {
 exports.createOrUpdateDraft = async (req, res) => {
   try {
     const teacherId = req.user.id;
-    const { title, maxMarks, questions } = req.body;
+    const { title, maxMarks, questions, classId } = req.body;
 
     if (!title) {
       return res.status(400).json({
@@ -119,6 +119,7 @@ exports.createOrUpdateDraft = async (req, res) => {
         rubric: q.rubric || "",
       })),
       lastUpdated: new Date(),
+      classId: classId || null,
     };
 
     if (draftIndex !== -1) {

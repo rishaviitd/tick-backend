@@ -145,7 +145,7 @@ exports.createAssignment = async (req, res) => {
  */
 exports.saveDraft = async (req, res) => {
   try {
-    const { title, maxMarks, questions } = req.body;
+    const { title, maxMarks, questions, classId } = req.body;
     const teacherId = req.user.id;
 
     console.log("Draft save request received:", {
@@ -153,6 +153,7 @@ exports.saveDraft = async (req, res) => {
       title,
       maxMarks,
       questionsCount: questions?.length || 0,
+      classId,
     });
 
     if (!title || !questions || !Array.isArray(questions)) {
@@ -181,6 +182,7 @@ exports.saveDraft = async (req, res) => {
         rubric: q.rubric || "",
       })),
       lastUpdated: new Date(),
+      classId: classId || null,
     };
 
     // Check if a draft with the same title exists
