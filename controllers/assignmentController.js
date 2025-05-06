@@ -110,11 +110,43 @@ exports.createAssignment = async (req, res) => {
     classData.assignments.push(newAssignment._id);
     await classData.save();
 
+    // 4. Find all students in this class and assign the assignment to them
+    const students = await Student.find({ classes: classId });
+    console.log(
+      `Found ${students.length} students to assign the assignment to`
+    );
+
+    // Create empty responses for each question
+    const emptyResponses = questionIds.map((questionId) => ({
+      question: questionId,
+      solution: "",
+    }));
+
+    // Update each student to add this assignment with "pending" status
+    for (const student of students) {
+      // Check if student already has this assignment (shouldn't happen for new assignments)
+      const hasAssignment = student.assignments.some(
+        (a) => a.assignment.toString() === newAssignment._id.toString()
+      );
+
+      if (!hasAssignment) {
+        // Add the assignment to the student's assignments array
+        student.assignments.push({
+          assignment: newAssignment._id,
+          status: "pending",
+          responses: emptyResponses,
+        });
+
+        await student.save();
+      }
+    }
+
     console.log("Assignment created successfully:", {
       assignmentId: newAssignment._id,
       title: newAssignment.title,
       questionsCount: questionIds.length,
       classId: classData._id,
+      studentsAssigned: students.length,
     });
 
     res.status(201).json({
@@ -126,6 +158,7 @@ exports.createAssignment = async (req, res) => {
         active: newAssignment.active,
         questionCount: questionIds.length,
         classId: classData._id,
+        studentsAssigned: students.length,
       },
     });
   } catch (err) {
@@ -219,6 +252,41 @@ exports.updateAssignment = async (req, res) => {
 
     await assignment.save();
 
+    // Find all students who have this assignment and update their responses
+    const studentsWithAssignment = await Student.find({
+      "assignments.assignment": assignmentId,
+    });
+    console.log(
+      `Found ${studentsWithAssignment.length} students with this assignment`
+    );
+
+    // Create empty responses for the new questions
+    const emptyResponses = newQuestionIds.map((questionId) => ({
+      question: questionId,
+      solution: "",
+    }));
+
+    // Update each student's assignment
+    for (const student of studentsWithAssignment) {
+      // Find the assignment in the student's assignments array
+      const assignmentIndex = student.assignments.findIndex(
+        (a) => a.assignment.toString() === assignmentId
+      );
+
+      if (assignmentIndex !== -1) {
+        // Update with new questions while preserving the assignment status
+        const currentStatus = student.assignments[assignmentIndex].status;
+        const submissionDate =
+          student.assignments[assignmentIndex].submissionDate;
+
+        // Replace the responses with new empty ones
+        student.assignments[assignmentIndex].responses = emptyResponses;
+
+        await student.save();
+        console.log(`Updated assignment for student: ${student.full_name}`);
+      }
+    }
+
     // Delete the old questions to prevent orphaned data
     if (existingQuestionIds && existingQuestionIds.length > 0) {
       await Question.deleteMany({ _id: { $in: existingQuestionIds } });
@@ -228,6 +296,7 @@ exports.updateAssignment = async (req, res) => {
       assignmentId: assignment._id,
       title: assignment.title,
       questionsCount: newQuestionIds.length,
+      studentsUpdated: studentsWithAssignment.length,
     });
 
     res.status(200).json({
@@ -238,6 +307,7 @@ exports.updateAssignment = async (req, res) => {
         title: assignment.title,
         active: assignment.active,
         questionCount: newQuestionIds.length,
+        studentsUpdated: studentsWithAssignment.length,
       },
     });
   } catch (err) {
