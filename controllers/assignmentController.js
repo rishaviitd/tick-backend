@@ -910,20 +910,22 @@ exports.getAvailableStudents = async (req, res) => {
       });
     }
 
-    // Get all students for this class
-    const allClassStudents = await Student.find({
+    // Get all students for this class who have the assignment with pending status
+    const studentsWithPendingStatus = await Student.find({
       classes: classData._id,
+      "assignments.assignment": assignmentId,
+      "assignments.status": "pending",
     }).select("_id full_name mobileNo rollNo");
 
     console.log(
-      `Found ${allClassStudents.length} students in class ${classData._id}`
+      `Found ${studentsWithPendingStatus.length} students with pending status for assignment ${assignmentId}`
     );
 
-    // Return all students in the class as available
+    // Return students with pending status
     res.status(200).json({
       success: true,
-      message: "Available students fetched successfully",
-      data: allClassStudents,
+      message: "Available students with pending status fetched successfully",
+      data: studentsWithPendingStatus,
     });
   } catch (err) {
     console.error("Error getting available students:", err);
