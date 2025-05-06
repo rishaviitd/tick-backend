@@ -693,7 +693,7 @@ exports.updateStudentAssignment = async (req, res) => {
 
     // Find the assignment in the student's assignments array
     const assignmentIndex = student.assignments.findIndex(
-      (a) => a.assignment.toString() === assignmentId
+      (a) => a.assignment?.toString() === assignmentId
     );
 
     if (assignmentIndex === -1) {
@@ -732,6 +732,14 @@ exports.updateStudentAssignment = async (req, res) => {
         return res.status(404).json({
           success: false,
           message: "Assignment not found",
+        });
+      }
+
+      // Make sure questions exist
+      if (!assignment.questions || !Array.isArray(assignment.questions)) {
+        return res.status(400).json({
+          success: false,
+          message: "Assignment has no questions",
         });
       }
 
@@ -786,7 +794,7 @@ exports.updateStudentAssignment = async (req, res) => {
           const responseIndex = student.assignments[
             assignmentIndex
           ].responses.findIndex(
-            (r) => r.question.toString() === item.questionId
+            (r) => r.question?.toString() === item.questionId
           );
 
           if (responseIndex !== -1) {
