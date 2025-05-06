@@ -912,31 +912,18 @@ exports.getAvailableStudents = async (req, res) => {
 
     // Get all students for this class
     const allClassStudents = await Student.find({
-      class: classData._id,
+      classes: classData._id,
     }).select("_id full_name mobileNo rollNo");
 
-    // Get students who already have this assignment
-    const studentsWithAssignment = await Student.find({
-      "assignments.assignment": assignmentId,
-    }).select("_id");
-
-    const assignedStudentIds = studentsWithAssignment.map((s) =>
-      s._id.toString()
-    );
-
-    // Filter to get only unassigned students
-    const availableStudents = allClassStudents.filter(
-      (student) => !assignedStudentIds.includes(student._id.toString())
-    );
-
     console.log(
-      `Found ${availableStudents.length} available students out of ${allClassStudents.length} total`
+      `Found ${allClassStudents.length} students in class ${classData._id}`
     );
 
+    // Return all students in the class as available
     res.status(200).json({
       success: true,
       message: "Available students fetched successfully",
-      data: availableStudents,
+      data: allClassStudents,
     });
   } catch (err) {
     console.error("Error getting available students:", err);
