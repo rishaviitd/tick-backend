@@ -17,9 +17,6 @@ router.get("/", draftController.getDrafts);
 // Create or update a draft
 router.post("/", draftController.createOrUpdateDraft);
 
-// Get a specific draft by title
-router.get("/:title", draftController.getDraft);
-
 // Delete a draft
 router.delete("/:title", draftController.deleteDraft);
 

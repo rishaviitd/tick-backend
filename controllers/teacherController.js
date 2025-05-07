@@ -52,26 +52,6 @@ exports.createTeacher = async (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-exports.getAllTeachers = async (req, res) => {
-  try {
-    const teachers = await Teacher.find({}, "full_name classes").populate(
-      "classes",
-      "title"
-    );
-
-    if (teachers.length === 0) {
-      return res.status(404).json({ message: "No teachers found" });
-    }
-
-    res.status(200).json({
-      message: "Teachers fetched successfully",
-      data: teachers,
-    });
-  } catch (error) {
-    console.error("Error fetching teachers:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
 
 /**
  * Get a teacher by ID with detailed information

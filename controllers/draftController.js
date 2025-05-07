@@ -39,46 +39,6 @@ exports.getDrafts = async (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-exports.getDraft = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-    const draftTitle = req.params.title;
-
-    if (!draftTitle) {
-      return res.status(400).json({
-        success: false,
-        error: "Draft title is required",
-      });
-    }
-
-    const teacher = await Teacher.findById(teacherId);
-    if (!teacher) {
-      return res.status(404).json({
-        success: false,
-        error: "Teacher not found",
-      });
-    }
-
-    const draft = teacher.drafts.find((draft) => draft.title === draftTitle);
-    if (!draft) {
-      return res.status(404).json({
-        success: false,
-        error: "Draft not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      draft,
-    });
-  } catch (error) {
-    console.error("Error fetching draft:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Server error",
-    });
-  }
-};
 
 /**
  * Create or update a draft

@@ -11,9 +11,6 @@ const router = express.Router();
 // Create a teacher
 router.post("/", teacherController.createTeacher);
 
-// Get all teachers
-router.get("/", teacherController.getAllTeachers);
-
 // Get a teacher by ID with detailed information
 router.get("/:id", teacherController.getTeacherById);
 
