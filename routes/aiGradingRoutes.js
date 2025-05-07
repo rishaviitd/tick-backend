@@ -56,4 +56,10 @@ router.get(
   aiGradingController.getDetailedFeedback
 );
 
+// Debug route to manually update a solution (for testing)
+router.post(
+  "/:assignmentId/students/:studentId/debug-solution",
+  aiGradingController.debugUpdateSolution
+);
+
 module.exports = router;

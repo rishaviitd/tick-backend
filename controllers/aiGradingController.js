@@ -45,7 +45,7 @@ exports.startGrading = async (req, res) => {
 
     // Find the assignment in the student's assignments array
     const assignmentIndex = student.assignments.findIndex(
-      (a) => a.assignment.toString() === assignmentId
+      (a) => a.assignment && a.assignment.toString() === assignmentId
     );
 
     if (assignmentIndex === -1) {
@@ -96,7 +96,16 @@ exports.startGrading = async (req, res) => {
 exports.updateGrades = async (req, res) => {
   try {
     const { assignmentId, studentId } = req.params;
-    const { feedbackData, status } = req.body;
+    const { feedbackData, solutions, status } = req.body;
+
+    console.log("updateGrades called with:", {
+      assignmentId,
+      studentId,
+      status,
+      feedbackData: feedbackData?.length || 0,
+      solutions: solutions?.length || 0,
+      body: JSON.stringify(req.body).substring(0, 100) + "...", // Log partial body for debugging
+    });
 
     if (!assignmentId || !studentId) {
       return res.status(400).json({
@@ -116,10 +125,19 @@ exports.updateGrades = async (req, res) => {
 
     // Find the assignment in the student's assignments array
     const assignmentIndex = student.assignments.findIndex(
-      (a) => a.assignment.toString() === assignmentId
+      (a) => a.assignment && a.assignment.toString() === assignmentId
     );
 
     if (assignmentIndex === -1) {
+      console.error("Assignment not found for student:", {
+        studentId,
+        assignmentId,
+        assignmentsCount: student.assignments.length,
+        assignments: student.assignments.map((a) => ({
+          id: a.assignment?.toString(),
+          status: a.status,
+        })),
+      });
       return res.status(404).json({
         success: false,
         message: "Assignment not found for this student",
@@ -145,28 +163,33 @@ exports.updateGrades = async (req, res) => {
           )}`,
         });
       }
+      console.log(`Updating status to: ${status}`);
       student.assignments[assignmentIndex].status = status;
     } else {
       // Default to completed
+      console.log("No status provided, defaulting to completed");
       student.assignments[assignmentIndex].status = "completed";
     }
 
-    // If feedback for individual questions is provided
-    if (feedbackData && Array.isArray(feedbackData)) {
-      console.log(`Processing ${feedbackData.length} feedback items`);
+    // Use either feedbackData or solutions, whichever is provided
+    const solutionsData = feedbackData || solutions || [];
 
-      feedbackData.forEach((feedback) => {
+    // If feedback for individual questions is provided
+    if (solutionsData && Array.isArray(solutionsData)) {
+      console.log(`Processing ${solutionsData.length} solution items`);
+
+      solutionsData.forEach((feedback) => {
         if (!feedback.questionId) {
           console.warn("Skipping feedback item without questionId");
           return;
         }
 
-        console.log(`Processing feedback for question ${feedback.questionId}`);
+        console.log(`Processing solution for question ${feedback.questionId}`);
 
         const responseIndex = student.assignments[
           assignmentIndex
         ].responses.findIndex(
-          (r) => r.question.toString() === feedback.questionId
+          (r) => r.question && r.question.toString() === feedback.questionId
         );
 
         if (responseIndex !== -1) {
@@ -177,11 +200,26 @@ exports.updateGrades = async (req, res) => {
           console.log(`Updated solution for question ${feedback.questionId}`);
         } else {
           console.warn(
-            `Question ${feedback.questionId} not found in student responses`
+            `Question ${feedback.questionId} not found in student responses. Available questions:`,
+            student.assignments[assignmentIndex].responses.map((r) => ({
+              id: r.question?.toString(),
+              hasSolution: !!r.solution,
+            }))
           );
         }
       });
     }
+
+    // Log the updated student assignment for debugging
+    console.log("Updated student assignment:", {
+      status: student.assignments[assignmentIndex].status,
+      responsesCount: student.assignments[assignmentIndex].responses.length,
+      firstSolution:
+        student.assignments[assignmentIndex].responses[0]?.solution?.substring(
+          0,
+          50
+        ) || "none",
+    });
 
     await student.save();
     console.log("Student document saved successfully");
@@ -376,6 +414,105 @@ exports.getDetailedFeedback = async (req, res) => {
     });
   } catch (err) {
     console.error("Error getting detailed solutions:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
+
+/**
+ * Debug function to directly update solutions for testing
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.debugUpdateSolution = async (req, res) => {
+  try {
+    const { assignmentId, studentId } = req.params;
+    const { questionIndex, solution } = req.body;
+
+    console.log("Debug update solution called with:", {
+      assignmentId,
+      studentId,
+      questionIndex,
+      solutionLength: solution?.length || 0,
+    });
+
+    if (
+      !assignmentId ||
+      !studentId ||
+      questionIndex === undefined ||
+      !solution
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Assignment ID, student ID, questionIndex, and solution are required",
+      });
+    }
+
+    // Find the student
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found",
+      });
+    }
+
+    // Find the assignment in the student's assignments array
+    const assignmentIndex = student.assignments.findIndex(
+      (a) => a.assignment && a.assignment.toString() === assignmentId
+    );
+
+    if (assignmentIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found for this student",
+      });
+    }
+
+    // Get the responses array
+    const responses = student.assignments[assignmentIndex].responses;
+
+    // Check if the questionIndex is valid
+    if (questionIndex < 0 || questionIndex >= responses.length) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid questionIndex. Must be between 0 and ${
+          responses.length - 1
+        }`,
+        availableQuestions: responses.map((r, i) => ({
+          index: i,
+          id: r.question?.toString(),
+        })),
+      });
+    }
+
+    // Update the solution
+    student.assignments[assignmentIndex].responses[questionIndex].solution =
+      solution;
+
+    // Also update the status to "graded"
+    student.assignments[assignmentIndex].status = "graded";
+
+    await student.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Solution updated successfully for debugging",
+      data: {
+        studentId,
+        assignmentId,
+        questionIndex,
+        solution:
+          solution.substring(0, 50) + (solution.length > 50 ? "..." : ""),
+        status: "graded",
+      },
+    });
+  } catch (err) {
+    console.error("Error in debug update solution:", err);
     res.status(500).json({
       success: false,
       message: "Internal server error",
