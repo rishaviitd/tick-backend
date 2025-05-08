@@ -32,6 +32,18 @@ router.get(
   assignmentController.getAvailableStudents
 );
 
+// Get rubric for a specific question in an assignment
+router.get(
+  "/:assignmentId/questions/:questionId/rubric",
+  assignmentController.getQuestionRubric
+);
+
+// Save steps breakdown for a student's question response
+router.post(
+  "/:assignmentId/students/:studentId/questions/:questionId/stepsBreakdown",
+  assignmentController.saveQuestionStepsBreakdown
+);
+
 // Student assignment management
 router.put(
   "/:assignmentId/students/:studentId",

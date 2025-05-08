@@ -945,3 +945,141 @@ exports.getAvailableStudents = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get the rubric for a specific question in an assignment
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getQuestionRubric = async (req, res) => {
+  const { assignmentId, questionId } = req.params;
+  if (!assignmentId || !questionId) {
+    return res.status(400).json({
+      success: false,
+      message: "Assignment ID and question ID are required",
+    });
+  }
+  try {
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Assignment not found" });
+    }
+    // Ensure question is part of this assignment
+    if (!assignment.questions.map(String).includes(questionId)) {
+      return res.status(404).json({
+        success: false,
+        message: "Question not found in this assignment",
+      });
+    }
+    const question = await Question.findById(questionId).select("rubric");
+    if (!question) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Question not found" });
+    }
+    return res
+      .status(200)
+      .json({ success: true, data: { rubric: question.rubric } });
+  } catch (err) {
+    console.error("Error getting question rubric:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
+
+/**
+ * Save steps breakdown for a specific student's question response
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.saveQuestionStepsBreakdown = async (req, res) => {
+  const { assignmentId, studentId, questionId } = req.params;
+  const breakdown = req.body;
+
+  // Validate breakdown structure
+  if (
+    !breakdown ||
+    typeof breakdown.studentThoughtProcess !== "string" ||
+    !Array.isArray(breakdown.steps) ||
+    breakdown.steps.some(
+      (step) =>
+        typeof step.stepNumber !== "number" ||
+        typeof step.studentWork !== "string" ||
+        typeof step.studentIntent !== "string"
+    )
+  ) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid steps breakdown structure" });
+  }
+
+  if (!assignmentId || !studentId || !questionId) {
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: "assignmentId, studentId, and questionId are required",
+      });
+  }
+
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
+    }
+
+    // Find the assignment entry
+    const assignmentEntry = student.assignments.find(
+      (a) => a.assignment?.toString() === assignmentId
+    );
+    if (!assignmentEntry) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Assignment not found for this student",
+        });
+    }
+
+    // Find the response entry
+    const responseEntry = assignmentEntry.responses.find(
+      (r) => r.question?.toString() === questionId
+    );
+    if (!responseEntry) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Response entry for question not found",
+        });
+    }
+
+    // Assign structured breakdown
+    responseEntry.stepsBreakdown = {
+      studentThoughtProcess: breakdown.studentThoughtProcess,
+      steps: breakdown.steps,
+    };
+
+    await student.save();
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Steps breakdown saved successfully" });
+  } catch (err) {
+    console.error("Error saving steps breakdown:", err);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal server error",
+        error: err.message,
+      });
+  }
+};
