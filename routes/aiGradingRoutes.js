@@ -56,6 +56,12 @@ router.get(
   aiGradingController.getDetailedFeedback
 );
 
+// Get steps breakdown for a student's question response
+router.get(
+  "/:assignmentId/students/:studentId/questions/:questionId/stepsBreakdown",
+  aiGradingController.getQuestionStepsBreakdown
+);
+
 // Debug route to manually update a solution (for testing)
 router.post(
   "/:assignmentId/students/:studentId/debug-solution",

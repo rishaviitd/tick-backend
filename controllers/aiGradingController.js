@@ -520,3 +520,61 @@ exports.debugUpdateSolution = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get steps breakdown for a student's question response
+ */
+exports.getQuestionStepsBreakdown = async (req, res) => {
+  try {
+    const { assignmentId, studentId, questionId } = req.params;
+    if (!assignmentId || !studentId || !questionId) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "assignmentId, studentId, and questionId are required",
+        });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
+    }
+
+    const assignmentEntry = student.assignments.find(
+      (a) => a.assignment?.toString() === assignmentId
+    );
+    if (!assignmentEntry) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Assignment not found for this student",
+        });
+    }
+
+    const responseEntry = assignmentEntry.responses.find(
+      (r) => r.question?.toString() === questionId
+    );
+    if (!responseEntry || !responseEntry.stepsBreakdown) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Steps breakdown not found" });
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, data: responseEntry.stepsBreakdown });
+  } catch (err) {
+    console.error("Error retrieving steps breakdown:", err);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal server error",
+        error: err.message,
+      });
+  }
+};
