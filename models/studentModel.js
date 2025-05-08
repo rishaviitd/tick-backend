@@ -38,7 +38,6 @@ const studentAssignmentSchema = new mongoose.Schema({
               status: {
                 type: String,
                 enum: ["correct", "incorrect", "partially correct"],
-                required: true,
               },
               justification: { type: String, default: "" },
             },
