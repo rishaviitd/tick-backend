@@ -28,12 +28,19 @@ const studentAssignmentSchema = new mongoose.Schema({
       // Store AI steps breakdown for student's response
       stepsBreakdown: {
         studentThoughtProcess: { type: String, default: "" },
+        overallAssessment: { type: String, default: "" },
         steps: {
           type: [
             {
               stepNumber: { type: Number, required: true },
               studentWork: { type: String, required: true },
               studentIntent: { type: String, required: true },
+              status: {
+                type: String,
+                enum: ["correct", "incorrect", "partially correct"],
+                required: true,
+              },
+              justification: { type: String, default: "" },
             },
           ],
           default: [],

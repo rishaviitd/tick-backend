@@ -62,6 +62,12 @@ router.get(
   aiGradingController.getQuestionStepsBreakdown
 );
 
+// Evaluate steps and overall assessment for a student's question response
+router.post(
+  "/:assignmentId/students/:studentId/questions/:questionId/evaluatedSteps",
+  aiGradingController.evaluatedSteps
+);
+
 // Debug route to manually update a solution (for testing)
 router.post(
   "/:assignmentId/students/:studentId/debug-solution",

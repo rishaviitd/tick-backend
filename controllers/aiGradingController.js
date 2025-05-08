@@ -528,12 +528,10 @@ exports.getQuestionStepsBreakdown = async (req, res) => {
   try {
     const { assignmentId, studentId, questionId } = req.params;
     if (!assignmentId || !studentId || !questionId) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "assignmentId, studentId, and questionId are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "assignmentId, studentId, and questionId are required",
+      });
     }
 
     const student = await Student.findById(studentId);
@@ -547,12 +545,10 @@ exports.getQuestionStepsBreakdown = async (req, res) => {
       (a) => a.assignment?.toString() === assignmentId
     );
     if (!assignmentEntry) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Assignment not found for this student",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found for this student",
+      });
     }
 
     const responseEntry = assignmentEntry.responses.find(
@@ -569,12 +565,94 @@ exports.getQuestionStepsBreakdown = async (req, res) => {
       .json({ success: true, data: responseEntry.stepsBreakdown });
   } catch (err) {
     console.error("Error retrieving steps breakdown:", err);
-    return res
-      .status(500)
-      .json({
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
+
+/**
+ * Update evaluated steps and overall assessment for a student's question response
+ */
+exports.evaluatedSteps = async (req, res) => {
+  try {
+    const { assignmentId, studentId, questionId } = req.params;
+    const { overallAssessment, evaluatedSteps } = req.body;
+
+    if (
+      !assignmentId ||
+      !studentId ||
+      !questionId ||
+      overallAssessment === undefined ||
+      !Array.isArray(evaluatedSteps)
+    ) {
+      return res.status(400).json({
         success: false,
-        message: "Internal server error",
-        error: err.message,
+        message:
+          "assignmentId, studentId, questionId, overallAssessment, and evaluatedSteps are required",
       });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
+    }
+
+    const assignmentIndex = student.assignments.findIndex(
+      (a) => a.assignment?.toString() === assignmentId
+    );
+    if (assignmentIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found for this student",
+      });
+    }
+
+    const responses = student.assignments[assignmentIndex].responses;
+    const responseIndex = responses.findIndex(
+      (r) => r.question?.toString() === questionId
+    );
+    if (responseIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Question not found in student's responses",
+      });
+    }
+
+    const responseEntry = responses[responseIndex];
+
+    // Update overall assessment
+    responseEntry.stepsBreakdown.overallAssessment = overallAssessment;
+
+    // Update each evaluated step
+    evaluatedSteps.forEach((evalStep) => {
+      if (evalStep.stepNumber === undefined) return;
+      const step = responseEntry.stepsBreakdown.steps.find(
+        (s) => s.stepNumber === evalStep.stepNumber
+      );
+      if (step) {
+        if (evalStep.status) step.status = evalStep.status;
+        if (evalStep.justification) step.justification = evalStep.justification;
+      }
+    });
+
+    await student.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Evaluated steps updated successfully",
+      data: responseEntry.stepsBreakdown,
+    });
+  } catch (err) {
+    console.error("Error updating evaluated steps:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
   }
 };
