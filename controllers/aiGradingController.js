@@ -626,7 +626,10 @@ exports.evaluatedSteps = async (req, res) => {
     const responseEntry = responses[responseIndex];
 
     // Update overall assessment
-    responseEntry.stepsBreakdown.overallAssessment = overallAssessment;
+    responseEntry.stepsBreakdown.overallAssessment = {
+      summary: overallAssessment.summary,
+      score: overallAssessment.score,
+    };
 
     // Update each evaluated step
     evaluatedSteps.forEach((evalStep) => {
@@ -637,6 +640,7 @@ exports.evaluatedSteps = async (req, res) => {
       if (step) {
         if (evalStep.status) step.status = evalStep.status;
         if (evalStep.justification) step.justification = evalStep.justification;
+        if (evalStep.marks !== undefined) step.marks = evalStep.marks;
       }
     });
 

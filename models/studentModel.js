@@ -28,7 +28,10 @@ const studentAssignmentSchema = new mongoose.Schema({
       // Store AI steps breakdown for student's response
       stepsBreakdown: {
         studentThoughtProcess: { type: String, default: "" },
-        overallAssessment: { type: String, default: "" },
+        overallAssessment: {
+          summary: { type: String, default: "" },
+          score: { type: Number, default: 0 },
+        },
         steps: {
           type: [
             {
@@ -40,6 +43,7 @@ const studentAssignmentSchema = new mongoose.Schema({
                 enum: ["correct", "incorrect", "partially correct"],
               },
               justification: { type: String, default: "" },
+              marks: { type: Number, default: 0 },
             },
           ],
           default: [],
