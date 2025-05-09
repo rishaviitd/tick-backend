@@ -579,13 +579,14 @@ exports.getQuestionStepsBreakdown = async (req, res) => {
 exports.evaluatedSteps = async (req, res) => {
   try {
     const { assignmentId, studentId, questionId } = req.params;
-    const { overallAssessment, evaluatedSteps } = req.body;
+    const { overallAssessment, evaluatedSteps, score } = req.body;
 
     if (
       !assignmentId ||
       !studentId ||
       !questionId ||
       overallAssessment === undefined ||
+      score === undefined ||
       !Array.isArray(evaluatedSteps)
     ) {
       return res.status(400).json({
@@ -627,6 +628,7 @@ exports.evaluatedSteps = async (req, res) => {
 
     // Update overall assessment
     responseEntry.stepsBreakdown.overallAssessment = overallAssessment;
+    responseEntry.stepsBreakdown.score = score;
 
     // Update each evaluated step
     evaluatedSteps.forEach((evalStep) => {

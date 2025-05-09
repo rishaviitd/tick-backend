@@ -29,6 +29,7 @@ const studentAssignmentSchema = new mongoose.Schema({
       stepsBreakdown: {
         studentThoughtProcess: { type: String, default: "" },
         overallAssessment: { type: String, default: "" },
+        score: { type: Number, default: 0 },
         steps: {
           type: [
             {
