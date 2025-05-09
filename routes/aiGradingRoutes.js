@@ -56,6 +56,12 @@ router.get(
   aiGradingController.getDetailedFeedback
 );
 
+// Get student responses with scores
+router.get(
+  "/:assignmentId/students/:studentId/responses",
+  aiGradingController.getStudentResponses
+);
+
 // Get steps breakdown for a student's question response
 router.get(
   "/:assignmentId/students/:studentId/questions/:questionId/stepsBreakdown",

@@ -743,3 +743,110 @@ exports.saveQuestionStepsBreakdown = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get student responses with scores for a specific assignment
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getStudentResponses = async (req, res) => {
+  try {
+    const { assignmentId, studentId } = req.params;
+
+    if (!assignmentId || !studentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Assignment ID and student ID are required",
+      });
+    }
+
+    // Find the student
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found",
+      });
+    }
+
+    // Find the assignment in the student's assignments array
+    const studentAssignment = student.assignments.find(
+      (a) => a.assignment.toString() === assignmentId
+    );
+
+    if (!studentAssignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found for this student",
+      });
+    }
+
+    // Get the assignment with questions for reference
+    const assignment = await Assignment.findById(assignmentId).populate(
+      "questions"
+    );
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found",
+      });
+    }
+
+    // Format the response with responses and scores
+    const studentResponses = await Promise.all(
+      studentAssignment.responses.map(async (response) => {
+        // Get the question details
+        const question = await Question.findById(response.question);
+
+        // Calculate score from overallAssessment if available
+        const score =
+          response.overallAssessment &&
+          typeof response.overallAssessment.score === "number"
+            ? response.overallAssessment.score
+            : null;
+
+        return {
+          questionId: response.question.toString(),
+          questionText: question ? question.text : "Question not found",
+          solution: response.solution,
+          overallAssessment: response.overallAssessment || {
+            summary: "",
+            score: null,
+          },
+        };
+      })
+    );
+
+    // Calculate total score if available
+    const totalScore = studentResponses.reduce((sum, response) => {
+      return (
+        sum +
+        (response.overallAssessment &&
+        typeof response.overallAssessment.score === "number"
+          ? response.overallAssessment.score
+          : 0)
+      );
+    }, 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        studentId,
+        studentName: student.full_name,
+        assignmentId,
+        assignmentTitle: assignment.title,
+        status: studentAssignment.status,
+        totalScore,
+        responses: studentResponses,
+      },
+    });
+  } catch (err) {
+    console.error("Error getting student responses with scores:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
