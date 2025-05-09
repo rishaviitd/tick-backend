@@ -662,3 +662,84 @@ exports.evaluatedSteps = async (req, res) => {
     });
   }
 };
+
+/**
+ * Save steps breakdown for a specific student's question response
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.saveQuestionStepsBreakdown = async (req, res) => {
+  const { assignmentId, studentId, questionId } = req.params;
+  const breakdown = req.body;
+
+  // Validate breakdown structure
+  if (
+    !breakdown ||
+    !Array.isArray(breakdown.steps) ||
+    breakdown.steps.some(
+      (step) =>
+        typeof step.stepNumber !== "number" ||
+        typeof step.studentWork !== "string"
+    )
+  ) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid steps breakdown structure" });
+  }
+
+  if (!assignmentId || !studentId || !questionId) {
+    return res.status(400).json({
+      success: false,
+      message: "assignmentId, studentId, and questionId are required",
+    });
+  }
+
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
+    }
+
+    // Find the assignment entry
+    const assignmentEntry = student.assignments.find(
+      (a) => a.assignment?.toString() === assignmentId
+    );
+    if (!assignmentEntry) {
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found for this student",
+      });
+    }
+
+    // Find the response entry
+    const responseEntry = assignmentEntry.responses.find(
+      (r) => r.question?.toString() === questionId
+    );
+    if (!responseEntry) {
+      return res.status(404).json({
+        success: false,
+        message: "Response entry for question not found",
+      });
+    }
+
+    // Assign structured breakdown
+    responseEntry.stepsBreakdown = {
+      steps: breakdown.steps,
+    };
+
+    await student.save();
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Steps breakdown saved successfully" });
+  } catch (err) {
+    console.error("Error saving steps breakdown:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};

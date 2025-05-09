@@ -62,6 +62,12 @@ router.get(
   aiGradingController.getQuestionStepsBreakdown
 );
 
+// Save steps breakdown for a student's question response
+router.post(
+  "/:assignmentId/students/:studentId/questions/:questionId/stepsBreakdown",
+  aiGradingController.saveQuestionStepsBreakdown
+);
+
 // Evaluate steps and overall assessment for a student's question response
 router.post(
   "/:assignmentId/students/:studentId/questions/:questionId/evaluatedSteps",
