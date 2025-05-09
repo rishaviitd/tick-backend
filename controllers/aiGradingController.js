@@ -593,28 +593,20 @@ exports.evaluatedSteps = async (req, res) => {
     const { assignmentId, studentId, questionId } = req.params;
     const { overallAssessment, evaluatedSteps } = req.body;
 
+    // Validate required parameters and payload shape
     if (
       !assignmentId ||
       !studentId ||
       !questionId ||
       !overallAssessment ||
-      typeof overallAssessment.summary === "undefined" ||
-      typeof overallAssessment.score === "undefined" ||
+      typeof overallAssessment.summary !== "string" ||
+      typeof overallAssessment.score !== "number" ||
       !Array.isArray(evaluatedSteps)
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "assignmentId, studentId, questionId, overallAssessment (with summary and score), and evaluatedSteps are required",
-      });
-    }
-
-    // Ensure score is a number
-    const score = Number(overallAssessment.score);
-    if (isNaN(score)) {
-      return res.status(400).json({
-        success: false,
-        message: "Score must be a valid number",
+          "assignmentId, studentId, questionId, overallAssessment (with summary and score), and evaluatedSteps array are required",
       });
     }
 
@@ -648,11 +640,11 @@ exports.evaluatedSteps = async (req, res) => {
 
     const responseEntry = responses[responseIndex];
 
-    // Update overall assessment with both summary and score
-    responseEntry.stepsBreakdown.overallAssessment = {
-      summary: overallAssessment.summary,
-      score: score, // Use the converted number
-    };
+    // Update nested overallAssessment summary and score
+    responseEntry.stepsBreakdown.overallAssessment.summary =
+      overallAssessment.summary;
+    responseEntry.stepsBreakdown.overallAssessment.score =
+      overallAssessment.score;
 
     // Update each evaluated step
     evaluatedSteps.forEach((evalStep) => {
