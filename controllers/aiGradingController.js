@@ -560,9 +560,21 @@ exports.getQuestionStepsBreakdown = async (req, res) => {
         .json({ success: false, message: "Steps breakdown not found" });
     }
 
-    return res
-      .status(200)
-      .json({ success: true, data: responseEntry.stepsBreakdown });
+    // Get the question's maxMarks
+    const question = await Question.findById(questionId);
+    if (!question) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Question not found" });
+    }
+
+    // Add maxMarks to the response
+    const response = {
+      ...responseEntry.stepsBreakdown.toObject(),
+      maxMarks: question.maxMarks,
+    };
+
+    return res.status(200).json({ success: true, data: response });
   } catch (err) {
     console.error("Error retrieving steps breakdown:", err);
     return res.status(500).json({
