@@ -625,8 +625,14 @@ exports.evaluatedSteps = async (req, res) => {
 
     const responseEntry = responses[responseIndex];
 
-    // Update overall assessment
-    responseEntry.stepsBreakdown.overallAssessment = overallAssessment;
+    // Update overall assessment summary and score
+    if (typeof overallAssessment === "string") {
+      // for backward compatibility, set summary only
+      responseEntry.overallAssessment.summary = overallAssessment;
+    } else {
+      responseEntry.overallAssessment.summary = overallAssessment.summary;
+      responseEntry.overallAssessment.score = overallAssessment.score;
+    }
 
     // Update each evaluated step
     evaluatedSteps.forEach((evalStep) => {
