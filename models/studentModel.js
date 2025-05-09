@@ -37,7 +37,6 @@ const studentAssignmentSchema = new mongoose.Schema({
             {
               stepNumber: { type: Number, required: true },
               studentWork: { type: String, required: true },
-              studentIntent: { type: String, required: true },
               status: {
                 type: String,
                 enum: ["correct", "incorrect", "partially correct"],

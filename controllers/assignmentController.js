@@ -1009,8 +1009,7 @@ exports.saveQuestionStepsBreakdown = async (req, res) => {
     breakdown.steps.some(
       (step) =>
         typeof step.stepNumber !== "number" ||
-        typeof step.studentWork !== "string" ||
-        typeof step.studentIntent !== "string"
+        typeof step.studentWork !== "string"
     )
   ) {
     return res
@@ -1019,12 +1018,10 @@ exports.saveQuestionStepsBreakdown = async (req, res) => {
   }
 
   if (!assignmentId || !studentId || !questionId) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "assignmentId, studentId, and questionId are required",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "assignmentId, studentId, and questionId are required",
+    });
   }
 
   try {
@@ -1040,12 +1037,10 @@ exports.saveQuestionStepsBreakdown = async (req, res) => {
       (a) => a.assignment?.toString() === assignmentId
     );
     if (!assignmentEntry) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Assignment not found for this student",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found for this student",
+      });
     }
 
     // Find the response entry
@@ -1053,12 +1048,10 @@ exports.saveQuestionStepsBreakdown = async (req, res) => {
       (r) => r.question?.toString() === questionId
     );
     if (!responseEntry) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Response entry for question not found",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Response entry for question not found",
+      });
     }
 
     // Assign structured breakdown
@@ -1074,12 +1067,10 @@ exports.saveQuestionStepsBreakdown = async (req, res) => {
       .json({ success: true, message: "Steps breakdown saved successfully" });
   } catch (err) {
     console.error("Error saving steps breakdown:", err);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal server error",
-        error: err.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
   }
 };
