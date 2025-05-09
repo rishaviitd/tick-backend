@@ -609,6 +609,15 @@ exports.evaluatedSteps = async (req, res) => {
       });
     }
 
+    // Ensure score is a number
+    const score = Number(overallAssessment.score);
+    if (isNaN(score)) {
+      return res.status(400).json({
+        success: false,
+        message: "Score must be a valid number",
+      });
+    }
+
     const student = await Student.findById(studentId);
     if (!student) {
       return res
@@ -642,7 +651,7 @@ exports.evaluatedSteps = async (req, res) => {
     // Update overall assessment with both summary and score
     responseEntry.stepsBreakdown.overallAssessment = {
       summary: overallAssessment.summary,
-      score: overallAssessment.score,
+      score: score, // Use the converted number
     };
 
     // Update each evaluated step
