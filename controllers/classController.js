@@ -184,14 +184,12 @@ exports.getTeacherClasses = async (req, res) => {
       .populate("teacher", "full_name")
       .populate("students", "full_name");
 
-    if (classes.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No classes found for this teacher" });
-    }
-
+    // Return empty array with 200 status instead of 404 error when no classes found
     res.status(200).json({
-      message: "Classes fetched successfully",
+      message:
+        classes.length === 0
+          ? "No classes found for this teacher"
+          : "Classes fetched successfully",
       data: classes,
     });
   } catch (error) {
