@@ -560,21 +560,9 @@ exports.getQuestionStepsBreakdown = async (req, res) => {
         .json({ success: false, message: "Steps breakdown not found" });
     }
 
-    // Get the question's maxMarks
-    const question = await Question.findById(questionId);
-    if (!question) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Question not found" });
-    }
-
-    // Add maxMarks to the response
-    const response = {
-      ...responseEntry.stepsBreakdown.toObject(),
-      maxMarks: question.maxMarks,
-    };
-
-    return res.status(200).json({ success: true, data: response });
+    return res
+      .status(200)
+      .json({ success: true, data: responseEntry.stepsBreakdown });
   } catch (err) {
     console.error("Error retrieving steps breakdown:", err);
     return res.status(500).json({
@@ -593,20 +581,17 @@ exports.evaluatedSteps = async (req, res) => {
     const { assignmentId, studentId, questionId } = req.params;
     const { overallAssessment, evaluatedSteps } = req.body;
 
-    // Validate required parameters and payload shape
     if (
       !assignmentId ||
       !studentId ||
       !questionId ||
-      !overallAssessment ||
-      typeof overallAssessment.summary !== "string" ||
-      typeof overallAssessment.score !== "number" ||
+      overallAssessment === undefined ||
       !Array.isArray(evaluatedSteps)
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "assignmentId, studentId, questionId, overallAssessment (with summary and score), and evaluatedSteps array are required",
+          "assignmentId, studentId, questionId, overallAssessment, and evaluatedSteps are required",
       });
     }
 
@@ -640,11 +625,8 @@ exports.evaluatedSteps = async (req, res) => {
 
     const responseEntry = responses[responseIndex];
 
-    // Update nested overallAssessment summary and score
-    responseEntry.stepsBreakdown.overallAssessment.summary =
-      overallAssessment.summary;
-    responseEntry.stepsBreakdown.overallAssessment.score =
-      overallAssessment.score;
+    // Update overall assessment
+    responseEntry.stepsBreakdown.overallAssessment = overallAssessment;
 
     // Update each evaluated step
     evaluatedSteps.forEach((evalStep) => {
