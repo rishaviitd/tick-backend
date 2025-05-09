@@ -591,20 +591,21 @@ exports.getQuestionStepsBreakdown = async (req, res) => {
 exports.evaluatedSteps = async (req, res) => {
   try {
     const { assignmentId, studentId, questionId } = req.params;
-    const { overallAssessment, evaluatedSteps, score } = req.body;
+    const { overallAssessment, evaluatedSteps } = req.body;
 
     if (
       !assignmentId ||
       !studentId ||
       !questionId ||
-      overallAssessment === undefined ||
-      score === undefined ||
+      !overallAssessment ||
+      typeof overallAssessment.summary === "undefined" ||
+      typeof overallAssessment.score === "undefined" ||
       !Array.isArray(evaluatedSteps)
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "assignmentId, studentId, questionId, overallAssessment, and evaluatedSteps are required",
+          "assignmentId, studentId, questionId, overallAssessment (with summary and score), and evaluatedSteps are required",
       });
     }
 
@@ -638,9 +639,11 @@ exports.evaluatedSteps = async (req, res) => {
 
     const responseEntry = responses[responseIndex];
 
-    // Update overall assessment
-    responseEntry.stepsBreakdown.overallAssessment = overallAssessment;
-    responseEntry.stepsBreakdown.score = score;
+    // Update overall assessment with both summary and score
+    responseEntry.stepsBreakdown.overallAssessment = {
+      summary: overallAssessment.summary,
+      score: overallAssessment.score,
+    };
 
     // Update each evaluated step
     evaluatedSteps.forEach((evalStep) => {
