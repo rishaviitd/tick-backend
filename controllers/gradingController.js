@@ -38,22 +38,17 @@ exports.uploadSubmission = async (req, res) => {
 
 async function handlePdfUpload(buffer, studentId, assignmentId) {
   try {
-    // Upload the PDF as a base64 data URI
+    // Upload PDF and automatically explode into PNGs of every page
     const pdfDataUri = `data:application/pdf;base64,${buffer.toString(
       "base64"
     )}`;
     const uploadResult = await cloudinary.uploader.upload(pdfDataUri, {
       resource_type: "raw",
+      eager: [{ flags: "explode", format: "png" }],
     });
 
-    // Explode the PDF into PNG images for all pages
-    const explodeResult = await cloudinary.api.explode(uploadResult.public_id, {
-      resource_type: "raw",
-      format: "png",
-    });
-
-    // Collect the secure URLs for each generated page
-    const urls = explodeResult.derived.map((item) => item.secure_url);
+    // Collect secure URLs for each page-derived PNG
+    const urls = (uploadResult.eager || []).map((item) => item.secure_url);
 
     const student = await Student.findById(studentId);
     if (!student) throw new Error(`Student not found: ${studentId}`);
