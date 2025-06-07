@@ -116,11 +116,8 @@ exports.createAssignment = async (req, res) => {
       `Found ${students.length} students to assign the assignment to`
     );
 
-    // Create empty responses for each question
-    const emptyResponses = questionIds.map((questionId) => ({
-      question: questionId,
-      solution: "",
-    }));
+    // Initialize empty string array for submission responses (to hold Cloudinary URLs)
+    const emptyResponses = [];
 
     // Update each student to add this assignment with "pending" status
     for (const student of students) {
