@@ -6,6 +6,7 @@ const studentAssignmentSchema = new mongoose.Schema({
     ref: "Assignment",
     required: true,
   },
+
   status: {
     type: String,
     enum: ["pending", "processing", "graded", "failed"],
@@ -14,41 +15,11 @@ const studentAssignmentSchema = new mongoose.Schema({
   submissionDate: {
     type: Date,
   },
-  responses: [
-    {
-      question: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Question",
-        required: true,
-      },
-      solution: {
-        type: String,
-        default: "",
-      },
-      overallAssessment: {
-        summary: { type: String, default: "" },
-        score: { type: Number, default: 0 },
-      },
-
-      // Store AI steps breakdown for student's response
-      stepsBreakdown: {
-        steps: {
-          type: [
-            {
-              stepNumber: { type: Number, required: true },
-              studentWork: { type: String, required: true },
-              status: {
-                type: String,
-                enum: ["correct", "incorrect", "partially correct"],
-              },
-              justification: { type: String, default: "" },
-            },
-          ],
-          default: [],
-        },
-      },
-    },
-  ],
+  // Store Cloudinary image URLs for student submissions
+  responses: {
+    type: [String],
+    default: [],
+  },
 });
 
 const studentSchema = new mongoose.Schema({

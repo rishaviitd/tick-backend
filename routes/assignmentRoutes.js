@@ -38,20 +38,4 @@ router.get(
   assignmentController.getQuestionRubric
 );
 
-// Save steps breakdown for a student's question response
-router.post(
-  "/:assignmentId/students/:studentId/questions/:questionId/stepsBreakdown",
-  assignmentController.saveQuestionStepsBreakdown
-);
-
-// Student assignment management
-router.put(
-  "/:assignmentId/students/:studentId",
-  assignmentController.updateStudentAssignment
-);
-router.post(
-  "/:assignmentId/students/:studentId/retry",
-  assignmentController.retryGrading
-);
-
 module.exports = router;

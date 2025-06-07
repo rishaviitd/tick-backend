@@ -14,7 +14,7 @@ const teacherRoutes = require("./routes/teacherRoutes");
 const classRoutes = require("./routes/classRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const draftRoutes = require("./routes/draftRoutes");
-const aiGradingRoutes = require("./routes/aiGradingRoutes");
+const gradingRoutes = require("./routes/gradingRoutes");
 
 // Initialize express app
 const app = express();
@@ -125,7 +125,7 @@ app.use("/api/v1/teachers", teacherRoutes);
 app.use("/api/v1/classes", classRoutes);
 app.use("/api/v1/assignments", assignmentRoutes);
 app.use("/api/v1/drafts", draftRoutes);
-app.use("/api/v1/ai-grading", aiGradingRoutes);
+app.use("/api/v1/grading", gradingRoutes);
 
 // Debug route for auth verification - can help diagnose issues
 app.get("/api/v1/auth/verify-debug", (req, res) => {

@@ -610,34 +610,17 @@ exports.getAssignmentDetails = async (req, res) => {
           };
         }
 
-        // Calculate total score from responses if graded
-        let score = studentAssignment.totalScore;
-        if (studentAssignment.status === "graded" && !score) {
-          score = studentAssignment.responses.reduce(
-            (total, r) => total + (r.feedback?.marks || 0),
-            0
-          );
-        }
-
+        // Removed grading-specific score calculation; will be rewritten
         return {
           studentId: student._id,
           studentName: student.full_name,
           status: studentAssignment.status,
-          score: studentAssignment.status === "graded" ? score : undefined,
           submissionDate: studentAssignment.submissionDate,
           isShared: studentAssignment.isShared,
           sharedUrl: studentAssignment.sharedUrl,
         };
       })
     );
-
-    // Calculate completion percentage
-    const gradedCount = studentResults.filter(
-      (s) => s.status === "graded"
-    ).length;
-    const totalStudents = studentResults.length;
-    const completion =
-      totalStudents > 0 ? Math.round((gradedCount / totalStudents) * 100) : 0;
 
     // Log response data for debugging
     console.log("Sending assignment details with classId:", classData._id);
@@ -649,7 +632,6 @@ exports.getAssignmentDetails = async (req, res) => {
         title: assignment.title,
         status: assignment.active ? "active" : "completed",
         maxMarks,
-        completion,
         questions: assignment.questions,
         students: studentResults,
         classId: classData._id.toString(), // Ensure classId is a string
@@ -672,214 +654,9 @@ exports.getAssignmentDetails = async (req, res) => {
  * @param {Object} res - Express response object
  */
 exports.updateStudentAssignment = async (req, res) => {
-  try {
-    const { assignmentId, studentId } = req.params;
-    const { status, isShared, totalScore, feedback } = req.body;
-
-    if (!assignmentId || !studentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Assignment ID and Student ID are required",
-      });
-    }
-
-    const student = await Student.findById(studentId);
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        message: "Student not found",
-      });
-    }
-
-    // Find the assignment in the student's assignments array
-    const assignmentIndex = student.assignments.findIndex(
-      (a) => a.assignment?.toString() === assignmentId
-    );
-
-    if (assignmentIndex === -1) {
-      // If assignment doesn't exist for student yet, create it
-      if (!status) {
-        return res.status(400).json({
-          success: false,
-          message: "Status is required for new assignment",
-        });
-      }
-
-      // Validate status is one of the allowed values
-      const validStatuses = [
-        "pending",
-        "submitted",
-        "processing",
-        "completed",
-        "graded",
-        "failed",
-      ];
-      if (status && !validStatuses.includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid status value. Must be one of: ${validStatuses.join(
-            ", "
-          )}`,
-        });
-      }
-
-      // Find the assignment to get its questions
-      const assignment = await Assignment.findById(assignmentId).populate(
-        "questions"
-      );
-
-      if (!assignment) {
-        return res.status(404).json({
-          success: false,
-          message: "Assignment not found",
-        });
-      }
-
-      // Make sure questions exist
-      if (!assignment.questions || !Array.isArray(assignment.questions)) {
-        return res.status(400).json({
-          success: false,
-          message: "Assignment has no questions",
-        });
-      }
-
-      // Create empty responses for each question
-      const responses = assignment.questions.map((q) => ({
-        question: q._id,
-        solution: "",
-      }));
-
-      // Add the new assignment to student
-      student.assignments.push({
-        assignment: assignmentId,
-        status,
-        responses,
-      });
-    } else {
-      // Update existing assignment
-      if (status) {
-        // Validate status is one of the allowed values
-        const validStatuses = [
-          "pending",
-          "submitted",
-          "processing",
-          "completed",
-          "graded",
-          "failed",
-        ];
-        if (!validStatuses.includes(status)) {
-          return res.status(400).json({
-            success: false,
-            message: `Invalid status value. Must be one of: ${validStatuses.join(
-              ", "
-            )}`,
-          });
-        }
-        student.assignments[assignmentIndex].status = status;
-      }
-
-      if (isShared !== undefined) {
-        student.assignments[assignmentIndex].isShared = isShared;
-      }
-
-      if (totalScore !== undefined) {
-        student.assignments[assignmentIndex].totalScore = totalScore;
-      }
-
-      // If feedback provided, update individual question feedback
-      if (feedback && Array.isArray(feedback)) {
-        feedback.forEach((item) => {
-          if (!item.questionId) return;
-
-          const responseIndex = student.assignments[
-            assignmentIndex
-          ].responses.findIndex(
-            (r) => r.question?.toString() === item.questionId
-          );
-
-          if (responseIndex !== -1) {
-            // Update the solution if provided
-            if (item.solution !== undefined) {
-              student.assignments[assignmentIndex].responses[
-                responseIndex
-              ].solution = item.solution || "";
-            }
-          }
-        });
-      }
-    }
-
-    await student.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Student assignment updated successfully",
-    });
-  } catch (err) {
-    console.error("Error updating student assignment:", err);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: err.message,
-    });
-  }
-};
-
-/**
- * Retry grading for a student's failed assignment
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-exports.retryGrading = async (req, res) => {
-  try {
-    const { assignmentId, studentId } = req.params;
-
-    if (!assignmentId || !studentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Assignment ID and Student ID are required",
-      });
-    }
-
-    const student = await Student.findById(studentId);
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        message: "Student not found",
-      });
-    }
-
-    // Find the assignment in the student's assignments array
-    const assignmentIndex = student.assignments.findIndex(
-      (a) => a.assignment.toString() === assignmentId
-    );
-
-    if (assignmentIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: "Assignment not found for this student",
-      });
-    }
-
-    // Update the status to "processing" to indicate regrading
-    student.assignments[assignmentIndex].status = "processing";
-    await student.save();
-
-    // Here you would typically initiate a background job for actual grading
-    // For now, we'll just return success
-
-    res.status(200).json({
-      success: true,
-      message: "Grading retried successfully",
-    });
-  } catch (err) {
-    console.error("Error retrying grading:", err);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: err.message,
-    });
-  }
+  res
+    .status(501)
+    .json({ success: false, message: "updateStudentAssignment removed" });
 };
 
 /**
@@ -945,7 +722,6 @@ exports.getAvailableStudents = async (req, res) => {
     });
   }
 };
-
 /**
  * Get the rubric for a specific question in an assignment
  * @param {Object} req - Express request object
@@ -998,79 +774,7 @@ exports.getQuestionRubric = async (req, res) => {
  * @param {Object} res - Express response object
  */
 exports.saveQuestionStepsBreakdown = async (req, res) => {
-  const { assignmentId, studentId, questionId } = req.params;
-  const breakdown = req.body;
-
-  // Validate breakdown structure
-  if (
-    !breakdown ||
-    typeof breakdown.studentThoughtProcess !== "string" ||
-    !Array.isArray(breakdown.steps) ||
-    breakdown.steps.some(
-      (step) =>
-        typeof step.stepNumber !== "number" ||
-        typeof step.studentWork !== "string"
-    )
-  ) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid steps breakdown structure" });
-  }
-
-  if (!assignmentId || !studentId || !questionId) {
-    return res.status(400).json({
-      success: false,
-      message: "assignmentId, studentId, and questionId are required",
-    });
-  }
-
-  try {
-    const student = await Student.findById(studentId);
-    if (!student) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Student not found" });
-    }
-
-    // Find the assignment entry
-    const assignmentEntry = student.assignments.find(
-      (a) => a.assignment?.toString() === assignmentId
-    );
-    if (!assignmentEntry) {
-      return res.status(404).json({
-        success: false,
-        message: "Assignment not found for this student",
-      });
-    }
-
-    // Find the response entry
-    const responseEntry = assignmentEntry.responses.find(
-      (r) => r.question?.toString() === questionId
-    );
-    if (!responseEntry) {
-      return res.status(404).json({
-        success: false,
-        message: "Response entry for question not found",
-      });
-    }
-
-    // Assign structured breakdown
-    responseEntry.stepsBreakdown = {
-      studentThoughtProcess: breakdown.studentThoughtProcess,
-      steps: breakdown.steps,
-    };
-
-    await student.save();
-
-    return res
-      .status(200)
-      .json({ success: true, message: "Steps breakdown saved successfully" });
-  } catch (err) {
-    console.error("Error saving steps breakdown:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: err.message,
-    });
-  }
+  res
+    .status(501)
+    .json({ success: false, message: "saveQuestionStepsBreakdown removed" });
 };
