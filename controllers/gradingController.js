@@ -38,17 +38,27 @@ exports.uploadSubmission = async (req, res) => {
 
 async function handlePdfUpload(buffer, studentId, assignmentId) {
   try {
-    // Upload PDF and automatically explode into PNGs of every page
+    // Upload PDF as an image resource to capture page count
     const pdfDataUri = `data:application/pdf;base64,${buffer.toString(
       "base64"
     )}`;
     const uploadResult = await cloudinary.uploader.upload(pdfDataUri, {
-      resource_type: "raw",
-      eager: [{ flags: "explode", format: "png" }],
+      resource_type: "image",
     });
-
-    // Collect secure URLs for each page-derived PNG
-    const urls = (uploadResult.eager || []).map((item) => item.secure_url);
+    // Generate a PNG URL for each page via dynamic transformations
+    const urls = [];
+    for (let i = 1; i <= uploadResult.pages; i++) {
+      urls.push(
+        cloudinary.url(uploadResult.public_id, {
+          resource_type: "image",
+          format: "png",
+          page: i,
+          width: 1024,
+          height: 768,
+          quality: 100,
+        })
+      );
+    }
 
     const student = await Student.findById(studentId);
     if (!student) throw new Error(`Student not found: ${studentId}`);
