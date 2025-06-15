@@ -17,7 +17,26 @@ const studentAssignmentSchema = new mongoose.Schema({
   },
   // Store Cloudinary image URLs for student submissions
   responses: {
-    type: [String],
+    type: [
+      {
+        question_id: { type: String, required: true },
+        image_url: { type: String, required: true },
+        correct_steps: [
+          {
+            text: { type: String, required: true },
+            marks_awarded: { type: Number, required: true },
+          },
+        ],
+        incorrect_steps: [
+          {
+            text: { type: String, required: true },
+            marks_deducted: { type: Number, required: true },
+          },
+        ],
+        total_awarded: { type: Number, required: true },
+        total_deducted: { type: Number, required: true },
+      },
+    ],
     default: [],
   },
 });

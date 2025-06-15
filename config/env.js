@@ -8,9 +8,18 @@ const path = require("path");
 // Load environment variables from .env file
 dotenv.config();
 
+// Determine environment mode
+const NODE_ENV = process.env.NODE_ENV || "development";
+const isProduction = NODE_ENV === "production";
+
+// Set port based on environment: 3000 for development, 80 for production (or override with PORT env var)
+const PORT = isProduction ? process.env.PORT || 80 : process.env.PORT || 3000;
+
 // Default configuration values
 const config = {
-  PORT: process.env.PORT || 3000,
+  NODE_ENV,
+  isProduction,
+  PORT,
   JWT_SECRET: process.env.JWT_SECRET || "your_jwt_secret_here",
   JWT_EXPIRES_IN: "24h",
   FRONTEND_URL: process.env.FRONTEND_URL,

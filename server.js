@@ -19,21 +19,29 @@ const gradingRoutes = require("./routes/gradingRoutes");
 // Initialize express app
 const app = express();
 
+// Determine environment mode
+const isProduction = process.env.NODE_ENV === "production";
+
+// Set allowed origins based on environment
+const allowedOrigins = isProduction
+  ? [
+      "https://usetick.com",
+      "https://www.usetick.com",
+      "https://app.usetick.com",
+      "https://www.app.usetick.com",
+    ]
+  : [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:8080",
+      "http://localhost:8081",
+      "http://localhost:3001",
+    ];
+
 // CORS Configuration
 const corsOptions = {
-  origin: [
-    // Production domains
-    "https://usetick.com",
-    "https://www.usetick.com",
-    "https://app.usetick.com",
-    "https://www.app.usetick.com",
-    // Development domains (keep for testing)
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:8080",
-    "http://localhost:8081",
-  ],
+  origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
   credentials: true,

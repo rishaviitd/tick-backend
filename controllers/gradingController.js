@@ -5,6 +5,9 @@
 
 const cloudinary = require("cloudinary").v2;
 const Student = require("../models/studentModel");
+const axios = require("axios");
+const Assignment = require("../models/assignmentModel");
+const { URL } = require("url");
 
 // Configure Cloudinary using environment variables
 cloudinary.config({
@@ -45,24 +48,22 @@ async function handlePdfUpload(buffer, studentId, assignmentId) {
     const uploadResult = await cloudinary.uploader.upload(pdfDataUri, {
       resource_type: "image",
     });
-    // Generate a PNG URL for each page via dynamic transformations
+
+    // Generate URLs for each page
     const urls = [];
     for (let i = 1; i <= uploadResult.pages; i++) {
-      urls.push(
-        cloudinary.url(uploadResult.public_id, {
-          resource_type: "image",
-          format: "png",
-          page: i,
-          width: 1024,
-          height: 768,
-          quality: 100,
-        })
-      );
+      const url = cloudinary.url(uploadResult.public_id, {
+        resource_type: "image",
+        format: "png",
+        page: i,
+        sign_url: true,
+      });
+      urls.push(url);
     }
 
+    // Phase 1: find student and mark submission date
     const student = await Student.findById(studentId);
     if (!student) throw new Error(`Student not found: ${studentId}`);
-
     const assignmentEntry = student.assignments.find(
       (entry) => entry.assignment.toString() === assignmentId
     );
@@ -70,15 +71,73 @@ async function handlePdfUpload(buffer, studentId, assignmentId) {
       throw new Error(
         `Assignment entry not found for assignment ${assignmentId}`
       );
-
-    assignmentEntry.responses = urls;
+    // Update submission date
     assignmentEntry.submissionDate = new Date();
+    await student.save();
 
+    // Phase 2: request cropped answer uploads from FastAPI
+    const fastApiUrl = process.env.FAST_API_URL;
+    if (!fastApiUrl) {
+      throw new Error("FAST_API_URL is not defined");
+    }
+    // Use FAST_API_URL directly for cropping
+    const { data } = await axios.post(fastApiUrl, { urls });
+    // Expect data.uploads to be an array of { question_id, image_url }
+    const uploads = data.uploads;
+    // Build final responses matching new schema
+    const finalResponses = uploads.map((u) => ({
+      question_id: u.question_id,
+      image_url: u.image_url,
+    }));
+    // Note: we defer saving until full grading to satisfy schema requirements
+
+    // Phase 3: grade responses via FastAPI grading endpoint
+    // Derive base origin from FAST_API_URL
+    const fastApiUrl2 = process.env.FAST_API_URL;
+    const baseOrigin = new URL(fastApiUrl2).origin;
+    const gradeUrl = `${baseOrigin}/grade-questions`;
+    const detailedAssignment = await Assignment.findById(assignmentId).populate(
+      "questions"
+    );
+    if (!detailedAssignment) {
+      throw new Error(`Assignment not found: ${assignmentId}`);
+    }
+    const questionsToGrade = finalResponses.map(
+      ({ question_id, image_url }) => {
+        const q = detailedAssignment.questions.find(
+          (x) => x._id.toString() === question_id
+        );
+        return {
+          question_id,
+          image_url,
+          rubric: q ? q.rubric : "",
+        };
+      }
+    );
+    const { data: gradingData } = await axios.post(gradeUrl, {
+      questions: questionsToGrade,
+    });
+    const gradedResults = gradingData.results;
+    // Combine with original URLs and build full responses
+    const combinedResponses = gradedResults.map((gr) => {
+      const orig = finalResponses.find((r) => r.question_id === gr.question_id);
+      return {
+        question_id: gr.question_id,
+        image_url: orig.image_url,
+        correct_steps: gr.correct_steps,
+        incorrect_steps: gr.incorrect_steps,
+        total_awarded: gr.total_awarded,
+        total_deducted: gr.total_deducted,
+      };
+    });
+    // Persist the full grading breakdown
+    assignmentEntry.responses = combinedResponses;
+    assignmentEntry.status = "graded";
     await student.save();
     console.log(
-      `Processed submission for student ${studentId}, assignment ${assignmentId}`
+      `Grading complete for student ${studentId}, assignment ${assignmentId}`
     );
-    return urls;
+    return combinedResponses;
   } catch (error) {
     console.error("Error processing submission:", error);
     throw error;
