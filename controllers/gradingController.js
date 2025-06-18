@@ -91,43 +91,12 @@ async function handlePdfUpload(buffer, studentId, assignmentId) {
     }));
     // Note: we defer saving until full grading to satisfy schema requirements
 
-    // Phase 3: grade responses via FastAPI grading endpoint
-    // Derive base origin from FAST_API_URL
-    const fastApiUrl2 = process.env.FAST_API_URL;
-    const baseOrigin = new URL(fastApiUrl2).origin;
-    const gradeUrl = `${baseOrigin}/grade-questions`;
-    const detailedAssignment = await Assignment.findById(assignmentId).populate(
-      "questions"
-    );
-    if (!detailedAssignment) {
-      throw new Error(`Assignment not found: ${assignmentId}`);
-    }
-    const questionsToGrade = finalResponses.map(
-      ({ question_id, image_url }) => {
-        const q = detailedAssignment.questions.find(
-          (x) => x._id.toString() === question_id
-        );
-        return {
-          question_id,
-          image_url,
-          rubric: q ? q.rubric : "",
-        };
-      }
-    );
-    const { data: gradingData } = await axios.post(gradeUrl, {
-      questions: questionsToGrade,
-    });
-    const gradedResults = gradingData.results;
-    // Combine with original URLs and build full responses
-    const combinedResponses = gradedResults.map((gr) => {
-      const orig = finalResponses.find((r) => r.question_id === gr.question_id);
+    // Skip grading - we're not storing grading data anymore
+    // Just use the question_id and image_url from finalResponses
+    const combinedResponses = finalResponses.map((resp) => {
       return {
-        question_id: gr.question_id,
-        image_url: orig.image_url,
-        correct_steps: gr.correct_steps,
-        incorrect_steps: gr.incorrect_steps,
-        total_awarded: gr.total_awarded,
-        total_deducted: gr.total_deducted,
+        question_id: resp.question_id,
+        image_url: resp.image_url,
       };
     });
     // Persist the full grading breakdown
