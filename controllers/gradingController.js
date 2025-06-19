@@ -80,8 +80,47 @@ async function handlePdfUpload(buffer, studentId, assignmentId) {
     if (!fastApiUrl) {
       throw new Error("FAST_API_URL is not defined");
     }
-    // Use FAST_API_URL directly for cropping
-    const { data } = await axios.post(fastApiUrl, { urls });
+    // Use FAST_API_URL directly for cropping with extended timeout
+    console.log(
+      `[handlePdfUpload] Sending ${urls.length} URLs to FastAPI: ${fastApiUrl}`
+    );
+    console.log(`[handlePdfUpload] URLs: ${JSON.stringify(urls)}`);
+
+    let data;
+    try {
+      const response = await axios.post(
+        fastApiUrl,
+        { urls },
+        {
+          timeout: 300000, // 5 minutes timeout to handle heavy processing
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      data = response.data;
+      console.log(
+        `[handlePdfUpload] FastAPI response successful: ${JSON.stringify(data)}`
+      );
+    } catch (error) {
+      console.error(`[handlePdfUpload] FastAPI request failed:`, error.message);
+      if (error.code === "ECONNABORTED") {
+        throw new Error(
+          "FastAPI request timed out - processing is taking longer than expected"
+        );
+      } else if (error.response) {
+        throw new Error(
+          `FastAPI returned error ${error.response.status}: ${error.response.data}`
+        );
+      } else if (error.request) {
+        // Network error - service might be down or starting up
+        throw new Error(
+          "Unable to connect to grading service - it may be starting up or temporarily unavailable"
+        );
+      } else {
+        throw new Error(`FastAPI request error: ${error.message}`);
+      }
+    }
     // Expect data.uploads to be an array of { question_id, image_url }
     const uploads = data.uploads;
     // Build final responses matching new schema
